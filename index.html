@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-HZWNB3WHS6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-HZWNB3WHS6');
+</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spatial Analysis Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://js.arcgis.com/4.30/esri/themes/light/main.css">
+<script src="https://js.arcgis.com/4.30/"></script>
+<style>
+/*
+VOICE: friendly field lab for teens: short sentences, one action per step, instant feedback, sounds and confetti.
+IDEA: a lab bench: numbered procedure on the left, the live ArcGIS map as the instrument on the right.
+PICTURE: the map itself; every analysis animates on it (rings grow, cells sweep in, routes race, sleds slide).
+COLOUR and TYPE: deep teal bench, white paper panel, coral as the "result" colour; Lexend throughout.
+LAYOUT: header with the analysis menu; panel 370px + map; under 760px the map stacks on top.
+*/
+:root{--teal:#0b3b47;--teal2:#145564;--paper:#fff;--bg:#eef3f3;--ink:#10262c;--muted:#4f6b73;--coral:#ff5a4e;--coral-ink:#c2362c;--ok:#13804f;--line:#d6e2e3}
+*{box-sizing:border-box;min-width:0}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Lexend,system-ui,sans-serif;display:flex;flex-direction:column}
+header{background:var(--teal);color:#fff;display:flex;align-items:center;gap:12px 16px;padding:10px max(3vw,16px);flex-wrap:wrap}
+header .lab{font-size:13px;opacity:.8;margin:0}
+header .lab a{color:#fff}
+header h1{font-size:24px;line-height:1.1;margin:0;font-weight:700}
+header .spacer{flex:1}
+header select{font:inherit;font-size:16px;min-height:44px;max-width:100%;padding:8px 12px;border-radius:10px;border:0;background:#fff;color:var(--ink);cursor:pointer}
+.snd{font:inherit;font-size:14px;min-height:44px;padding:8px 14px;border-radius:10px;border:2px solid rgba(255,255,255,.5);background:transparent;color:#fff;cursor:pointer;white-space:nowrap}
+.snd[aria-pressed=false]{opacity:.7}
+main{flex:1;display:grid;grid-template-columns:minmax(0,370px) minmax(0,1fr);min-height:0}
+aside{background:var(--paper);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;overflow:auto}
+.what{margin:0;padding:14px 22px 0;color:var(--muted);font-size:14px}
+ol.steps{list-style:none;margin:0;padding:12px 18px 4px;display:flex;gap:6px}
+ol.steps:empty{display:none}
+ol.steps li{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;color:var(--muted);text-align:center}
+ol.steps li span{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--line);font-weight:600;background:#fff;transition:all .3s}
+ol.steps li.now span{border-color:var(--coral);color:var(--coral-ink);transform:scale(1.1)}
+ol.steps li.now{color:var(--ink);font-weight:600}
+ol.steps li.done span{background:var(--teal);border-color:var(--teal);color:#fff}
+#card{padding:8px 22px 28px;animation:in .35s ease}
+@keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+#card h2{font-size:22px;line-height:1.15;margin:8px 0 10px}
+#card h3{font-size:17px;margin:18px 0 8px}
+#card p{margin:0 0 12px}
+.muted{color:var(--muted);font-size:14px}
+.btn{font:inherit;font-weight:600;min-height:44px;padding:10px 18px;border-radius:10px;border:0;background:var(--teal);color:#fff;cursor:pointer}
+.btn:hover{background:var(--teal2)}
+.btn:disabled{background:#b7c7ca;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--teal);border:2px solid var(--teal)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,.opt:focus-visible,.lab-link:focus-visible,.snd:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.stat{display:flex;align-items:baseline;gap:8px;margin:12px 0 6px;flex-wrap:wrap}
+.stat b{font-size:44px;line-height:1;color:var(--coral-ink);font-variant-numeric:tabular-nums}
+.meter{height:12px;background:#e5eced;border-radius:6px;overflow:hidden;position:relative}
+.meter i{display:block;height:100%;width:0;background:var(--coral);border-radius:6px;transition:width .25s}
+.meter u{position:absolute;top:-3px;bottom:-3px;width:3px;background:var(--teal);text-decoration:none}
+label.sl{display:block;font-weight:600;margin-top:6px}
+input[type=range]{width:100%;height:44px;accent-color:var(--coral)}
+.big{font-size:20px;font-weight:700;white-space:nowrap}
+.note{background:#fff1ef;border-left:4px solid var(--coral);padding:10px 12px;border-radius:6px;font-size:14px;margin:12px 0}
+.win{background:#e7f6ee;border-left-color:var(--ok)}
+.opt{display:block;width:100%;text-align:left;font:inherit;min-height:44px;margin:8px 0;padding:10px 14px;border:2px solid var(--line);border-radius:10px;background:#fff;cursor:pointer;color:var(--ink);text-decoration:none}
+.opt:hover{border-color:var(--teal)}
+.opt.picked{border-color:var(--teal);background:#e8f1f2}
+.opt:disabled{cursor:default}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:8px;vertical-align:-1px}
+.labs{display:grid;gap:8px;margin-top:8px}
+.lab-link{display:flex;gap:12px;align-items:center;padding:10px 12px;border:2px solid var(--line);border-radius:12px;color:var(--ink);text-decoration:none;transition:transform .15s,border-color .15s}
+.lab-link:hover{border-color:var(--coral);transform:translateX(3px)}
+.lab-link .num{flex:none;width:34px;height:34px;border-radius:50%;background:var(--teal);color:#fff;display:grid;place-items:center;font-weight:700}
+.lab-link small{color:var(--muted);font-size:13px;line-height:1.3;display:block}
+.fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.fields label{font-size:14px;font-weight:600}
+.fields select{display:block;width:100%;font:inherit;font-size:16px;min-height:44px;margin-top:4px;padding:6px 10px;border:2px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+.sql{font:600 14px/1.4 ui-monospace,Menlo,Consolas,monospace;background:#10262c;color:#bff3e0;padding:10px 12px;border-radius:8px;margin:12px 0;overflow-x:auto;white-space:pre-wrap}
+.bars{display:grid;gap:6px;margin:10px 0}
+.bars div{display:grid;grid-template-columns:7.5em minmax(0,1fr) 2.5em;align-items:center;gap:8px;font-size:14px}
+.bars i{display:block;height:12px;border-radius:6px;width:0;transition:width .6s}
+.bars b{text-align:right;font-variant-numeric:tabular-nums}
+.hist{width:100%;height:130px;display:block;margin:8px 0}
+.mapwrap{position:relative;min-height:0}
+#viewDiv{position:absolute;inset:0}
+.overlay{position:absolute;z-index:2;pointer-events:none}
+#hint{top:16px;left:50%;transform:translateX(-50%);background:var(--teal);color:#fff;padding:10px 16px;border-radius:999px;font-weight:600;font-size:15px;box-shadow:0 6px 20px rgba(0,0,0,.2);white-space:nowrap;display:none;animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translate(-50%,5px)}}
+#chip{top:16px;right:16px;background:#fff;padding:8px 14px;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.15);font-size:14px;display:none;max-width:60%}
+#chip b{color:var(--coral-ink);font-size:18px;font-variant-numeric:tabular-nums}
+#legend{left:16px;bottom:28px;background:rgba(255,255,255,.95);padding:8px 12px;border-radius:10px;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.12);display:none;max-width:60%}
+#legend div{display:flex;align-items:center;gap:8px}
+#legend i{width:11px;height:11px;border-radius:50%;display:inline-block;flex:none}
+#legend i.sq{border-radius:2px}
+#legend i.ln{height:4px;border-radius:2px;width:16px}
+#sample{right:16px;bottom:28px;font-size:12px;color:var(--muted);background:rgba(255,255,255,.85);padding:2px 8px;border-radius:6px}
+#fx{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden}
+.conf{position:absolute;top:-12px;width:9px;height:14px;border-radius:2px;animation:fall 2.2s cubic-bezier(.3,.6,.6,1) forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:.2}}
+.flake{position:absolute;top:-10px;width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 4px rgba(80,120,200,.6);animation:snow 3.2s linear forwards}
+@keyframes snow{to{transform:translate(30px,110vh)}}
+.flash{position:absolute;inset:0;background:#fff;animation:flash .7s ease-out forwards}
+@keyframes flash{from{opacity:.95}to{opacity:0}}
+.burst{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font:700 clamp(28px,6vw,56px)/1 Lexend,sans-serif;color:#fff;text-shadow:0 3px 0 var(--teal),0 6px 24px rgba(0,0,0,.35);animation:burst 2.4s ease forwards;white-space:nowrap}
+@keyframes burst{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}15%{transform:translate(-50%,-50%) scale(1.1);opacity:1}25%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0}}
+#pop{position:absolute;z-index:3;display:none;background:#fff;color:var(--ink);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.24);padding:10px 38px 10px 14px;width:max-content;max-width:240px;font-size:14px;line-height:1.35;transform:translate(-50%,calc(-100% - 16px));animation:popin .18s ease}
+#pop::after{content:"";position:absolute;left:var(--ax,50%);bottom:-7px;width:14px;height:14px;background:#fff;transform:translateX(-50%) rotate(45deg)}
+#pop.below{transform:translate(-50%,16px)}
+#pop.below::after{bottom:auto;top:-7px}
+#pop b{display:block;font-size:15px;padding-right:2px}
+#pop p{margin:4px 0 0}
+#pop .x{position:absolute;top:3px;right:3px;width:34px;height:34px;border:0;background:none;font:20px/1 Lexend,sans-serif;cursor:pointer;color:var(--muted);border-radius:8px}
+#pop .x:hover{background:var(--bg)}
+@keyframes popin{from{opacity:0}}
+#legend .lh{color:var(--muted);font-size:12px;margin-bottom:3px}
+#err{position:absolute;inset:0;display:none;place-items:center;padding:24px;text-align:center;background:var(--bg);z-index:4}
+
+/* ---------- splash ---------- */
+#splash{position:fixed;inset:0;z-index:50;overflow:auto;color:#fff;display:flex;align-items:center;justify-content:center;padding:28px max(4vw,16px);
+  background:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px) 0 0/44px 44px,linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px) 0 0/44px 44px,radial-gradient(ellipse at 50% 0%,#17606f 0%,#0b3b47 55%,#06262e 100%);
+  animation:drift 40s linear infinite;transition:opacity .5s,transform .5s}
+@keyframes drift{to{background-position:44px 44px,44px 44px,0 0}}
+#splash.out{opacity:0;transform:scale(1.04);pointer-events:none}
+.sp-in{width:100%;max-width:1120px;text-align:center}
+#splash h1{font-size:clamp(36px,6vw,62px);line-height:1.05;margin:0 0 10px;text-wrap:balance;animation:rise .7s ease backwards}
+.sp-tag{font-size:clamp(16px,2vw,20px);opacity:.92;margin:0 auto 28px;max-width:36em;animation:rise .7s .15s ease backwards}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}}
+.sp-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+.sp-tile{font:inherit;color:var(--ink);background:#fff;border:0;border-radius:14px;padding:8px 8px 10px;cursor:pointer;text-align:left;box-shadow:0 10px 26px rgba(0,0,0,.28);
+  animation:pop .55s cubic-bezier(.3,1.4,.5,1) backwards;animation-delay:calc(.3s + var(--i)*70ms);transition:transform .15s,box-shadow .15s}
+.sp-tile:hover{transform:translateY(-4px);box-shadow:0 16px 30px rgba(0,0,0,.35)}
+.sp-tile:focus-visible{outline:3px solid var(--coral);outline-offset:3px}
+.sp-tile svg{display:block;width:100%;height:auto;border-radius:9px;background:#eef4f4}
+.sp-tile b{display:block;font-size:14px;line-height:1.2;margin-top:7px}
+.sp-tile small{display:block;font-size:12px;color:var(--muted);line-height:1.25}
+@keyframes pop{from{opacity:0;transform:scale(.7) translateY(20px)}}
+.sp-go{margin-top:28px;background:var(--coral);font-size:18px;padding:12px 30px;animation:rise .7s 1.1s ease backwards}
+.sp-go:hover{background:#ff7166}
+.sp-note{font-size:13px;opacity:.78;margin:12px 0 0}
+@media(max-width:900px){.sp-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:560px){.sp-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}#splash{align-items:flex-start}}
+.credits{margin-top:auto;padding:14px 22px 18px;border-top:1px solid var(--line);font-size:13px;line-height:1.45;color:var(--muted);text-align:left}
+.credits p{margin:0}
+.credits a{color:var(--teal);font-weight:600;text-underline-offset:2px}
+.credits a:hover{color:var(--coral-ink)}
+.credits a:focus-visible{outline:3px solid var(--coral);outline-offset:2px;border-radius:3px}
+@media (max-width:760px){
+  html,body{height:auto;min-height:100%}
+  main{flex:none;grid-template-columns:minmax(0,1fr);grid-template-rows:50vh auto}
+  #legend{font-size:12px;padding:6px 10px}
+  .mapwrap{order:-1}
+  aside{border-right:0;overflow:visible}
+  header h1{font-size:20px}
+  header select{flex:1 1 100%}
+  #hint{font-size:13px;top:10px}
+  #chip{top:56px;right:10px}
+  #sample{display:none}
+  #legend{left:10px;bottom:24px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.conf,.flake{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <div><p class="lab"><a href="#">Spatial Analysis Lab</a></p><h1 id="title">Spatial Analysis Lab</h1></div>
+  <div class="spacer"></div>
+  <select id="sel" aria-label="Choose an analysis"></select>
+  <button class="snd" id="snd" aria-pressed="true">Sound on</button>
+</header>
+<main>
+  <aside>
+    <p class="what" id="what"></p>
+    <ol class="steps" id="steps"></ol>
+    <div id="card"></div>
+    <div class="credits">
+      <p>Designed by <a href="https://tbaker.com" target="_blank" rel="noopener">Tom Baker</a>.</p>
+      <p><a href="https://esriurl.com/k12software" target="_blank" rel="noopener">Get GIS software for your school.</a></p>
+    </div>
+  </aside>
+  <section class="mapwrap" aria-label="Map">
+    <div id="viewDiv"></div>
+    <div class="overlay" id="hint"></div>
+    <div class="overlay" id="chip"></div>
+    <div class="overlay" id="legend"></div>
+    <div class="overlay" id="sample">Lab data is sample data · Basemap: Esri</div>
+    <div id="pop" role="status"></div>
+    <div id="fx"></div>
+    <div id="err"><div><h2>The map didn't load</h2><p>This lab needs an internet connection to reach ArcGIS Online (js.arcgis.com). Check your connection or ask your teacher, then reload the page.</p></div></div>
+  </section>
+</main>
+
+<script>
+{
+const $ = id => document.getElementById(id);
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ================= math helpers ================= */
+const RAD=Math.PI/180, EARTH=6378137;
+const toWM=(lon,lat)=>[EARTH*lon*RAD, EARTH*Math.log(Math.tan(Math.PI/4+lat*RAD/2))];
+const fromWM=(x,y)=>({lon:x/EARTH/RAD, lat:(2*Math.atan(Math.exp(y/EARTH))-Math.PI/2)/RAD});
+function mi(a,b){ const R=3958.8; const dLa=(b.lat-a.lat)*RAD, dLo=(b.lon-a.lon)*RAD;
+  const h=Math.sin(dLa/2)**2+Math.cos(a.lat*RAD)*Math.cos(b.lat*RAD)*Math.sin(dLo/2)**2; return 2*R*Math.asin(Math.sqrt(h)); }
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const gaussOf=r=>()=>{let u=0,v=0;while(!u)u=r();while(!v)v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const ease=k=>1-(1-k)**3;
+function ramp(stops,t){ t=clamp(t,0,1); const n=stops.length-1, i=Math.min(n-1,Math.floor(t*n)), f=t*n-i, a=stops[i], b=stops[i+1];
+  return [0,1,2,3].map(k=>k<3?Math.round(a[k]+(b[k]-a[k])*f):+(a[k]+(b[k]-a[k])*f).toFixed(3)); }
+const css=c=>`rgba(${c[0]},${c[1]},${c[2]},${c[3]??1})`;
+const fmt1=v=>(Math.round(v*10)/10).toFixed(1);
+function makeGrid(b,nx,ny){
+  const [x0,y0]=toWM(b.w,b.s),[x1,y1]=toWM(b.e,b.n), dx=(x1-x0)/nx, dy=(y1-y0)/ny, cells=[];
+  for(let j=0;j<ny;j++) for(let i=0;i<nx;i++){
+    const X=x0+i*dx, Y=y0+j*dy, ll=fromWM(X+dx/2,Y+dy/2);
+    cells.push({i,j,x:X+dx/2,y:Y+dy/2,lon:ll.lon,lat:ll.lat,ring:[[X,Y],[X,Y+dy],[X+dx,Y+dy],[X+dx,Y],[X,Y]]});
+  }
+  return {cells,nx,ny,dx,dy, at(x,y){ const i=Math.floor((x-x0)/dx), j=Math.floor((y-y0)/dy); return (i<0||j<0||i>=nx||j>=ny)?null:cells[j*nx+i]; },
+    get(i,j){ return (i<0||j<0||i>=nx||j>=ny)?null:cells[j*nx+i]; }};
+}
+
+/* ================= sound effects (synthesized, no files) ================= */
+const SFX=(()=>{
+  let ctx=null, on=true, last=0;
+  try{ on = localStorage.getItem("sal-sound")!=="off"; }catch(e){}
+  const ac=()=>{ if(!on) return null; try{ if(!ctx){ const C=window.AudioContext||window.webkitAudioContext; if(!C) return null; ctx=new C(); } if(ctx.state==="suspended") ctx.resume(); }catch(e){ return null; } return ctx; };
+  const tone=(f,d,type="sine",v=.12,at=0,to=null)=>{ const c=ac(); if(!c) return; const t=c.currentTime+at, o=c.createOscillator(), g=c.createGain();
+    o.type=type; o.frequency.setValueAtTime(f,t); if(to) o.frequency.exponentialRampToValueAtTime(to,t+d);
+    g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(v,t+.012); g.gain.exponentialRampToValueAtTime(.0001,t+d);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+d+.05); };
+  const noise=(d,f0,f1,v=.14,at=0)=>{ const c=ac(); if(!c) return; const t=c.currentTime+at, len=Math.floor(c.sampleRate*d), b=c.createBuffer(1,len,c.sampleRate), ch=b.getChannelData(0);
+    for(let i=0;i<len;i++) ch[i]=Math.random()*2-1;
+    const s=c.createBufferSource(); s.buffer=b; const fl=c.createBiquadFilter(); fl.type="bandpass"; fl.Q.value=1.2;
+    fl.frequency.setValueAtTime(f0,t); fl.frequency.exponentialRampToValueAtTime(f1,t+d);
+    const g=c.createGain(); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(v,t+d*.3); g.gain.exponentialRampToValueAtTime(.0001,t+d);
+    s.connect(fl); fl.connect(g); g.connect(c.destination); s.start(t); s.stop(t+d+.05); };
+  const throttle=(ms,fn)=>{ const n=performance.now(); if(n-last<ms) return; last=n; fn(); };
+  return {
+    get on(){ return on; }, set(v){ on=v; try{ localStorage.setItem("sal-sound",v?"on":"off"); }catch(e){} },
+    unlock(){ ac(); },
+    pop:()=>tone(520,.14,"sine",.16,0,1100),
+    click:()=>tone(880,.05,"triangle",.07),
+    tick:()=>throttle(45,()=>tone(1400+Math.random()*300,.04,"square",.022)),
+    chime:()=>throttle(70,()=>{ const s=[1047,1175,1319,1568,1760]; tone(s[Math.floor(Math.random()*5)],.45,"sine",.05); }),
+    whoosh:(d=.7)=>noise(d,300,2400,.14),
+    slide:(d=1.2)=>noise(d,1800,350,.13),
+    ding:()=>{ tone(988,.35,"sine",.12); tone(1318,.5,"sine",.09,.09); },
+    miss:()=>tone(180,.3,"sawtooth",.06,0,90),
+    win:()=>[523,659,784,1047].forEach((f,i)=>tone(f,.3,"triangle",.11,i*.09)),
+    bell:()=>{ tone(1568,.6,"sine",.1); tone(1175,.8,"sine",.08,.2); },
+    shutter:()=>{ noise(.07,4000,3000,.22); noise(.06,2500,2000,.16,.09); },
+    thud:()=>tone(160,.25,"sine",.18,0,70),
+    snow:()=>[1568,1319,1175,1047,1319,1568].forEach((f,i)=>tone(f,.5,"sine",.06,i*.12))
+  };
+})();
+addEventListener("pointerdown",()=>SFX.unlock(),{once:true});
+
+/* ================= overlays & effects ================= */
+function hint(t){ const h=$("hint"); h.style.display=t?"block":"none"; if(t) h.textContent=t; }
+function chip(html){ const c=$("chip"); c.style.display=html?"block":"none"; if(html) c.innerHTML=html; }
+function legend(items){ const l=$("legend"); l.style.display=items?"block":"none";
+  if(items) l.innerHTML=`<div class="lh">Tip: click a marker to learn about it</div>`+items.map(([c,t,s])=>`<div><i class="${s||""}" style="background:${c}"></i>${t}</div>`).join(""); }
+function fx(cls,n,style){ if(reduce && cls!=="flash" && cls!=="burst") return; const box=$("fx"), made=[];
+  for(let i=0;i<n;i++){ const d=document.createElement("div"); d.className=cls; style(d,i); box.appendChild(d); made.push(d); }
+  setTimeout(()=>made.forEach(d=>d.remove()),3600); }
+const COLORS=["#ff5a4e","#ffc83d","#2bb673","#3d8bff","#b45cff","#ff8fc7"];
+const confetti=()=>fx("conf",46,(d,i)=>{ d.style.left=Math.random()*100+"%"; d.style.background=COLORS[i%6]; d.style.animationDelay=Math.random()*.4+"s"; d.style.transform=`rotate(${Math.random()*360}deg)`; });
+const snowfall=()=>fx("flake",60,d=>{ d.style.left=Math.random()*100+"%"; d.style.animationDelay=Math.random()*1.6+"s"; d.style.opacity=.6+Math.random()*.4; });
+const flash=()=>fx("flash",1,()=>{});
+const burst=t=>fx("burst",1,d=>{ d.textContent=t; });
+
+
+/* ================= splash screen ================= */
+const SPL=[["buffer","Buffer","Skate park reach"],["overlay","Overlay","Perfect hangout spot"],["interpolation","Interpolation","Snow day predictor"],["hotspots","Hot spots","Cleanup crew"],["network","Network","Road trip"],["query","Query & select","Pizza finder"],["autocorrelation","Spatial autocorrelation","Halloween candy map"],["density","Density","Firefly night"],["terrain","Terrain","Sledding hill"],["proximity","Proximity","Ice cream truck turf"]];
+const SPLASH_SVG=(()=>{
+  const D=4, f3=v=>v.toFixed(3), n1=v=>v.toFixed(1);
+  const A=(at,vals,kt,more="")=>`<animate attributeName="${at}" values="${vals}" keyTimes="${kt}" dur="${D}s" repeatCount="indefinite" ${more}/>`;
+  const sw=(at,a,b,f)=>{ const t=clamp(f,0,.86); return A(at,`${a};${a};${b};${b};${a}`,`0;${f3(t)};${f3(t+.02)};.94;1`); };
+  const rgb=c=>`rgb(${c[0]},${c[1]},${c[2]})`;
+  const svg=b=>`<svg viewBox="0 0 120 84" aria-hidden="true" focusable="false">${b}</svg>`;
+  const STARP="M0,-10 L2.9,-4 L9.5,-3.1 L4.7,1.5 L5.9,8.1 L0,5 L-5.9,8.1 L-4.7,1.5 L-9.5,-3.1 L-2.9,-4 Z";
+  const cellsOf=(nx,ny)=>{ const cw=120/nx, ch=84/ny, out=[]; for(let j=0;j<ny;j++) for(let i=0;i<nx;i++) out.push({i,j,x:i*cw,y:j*ch,cx:i*cw+cw/2,cy:j*ch+ch/2,cw,ch}); return out; };
+  return [
+    ()=>{ const r=rng(5), cx=60, cy=44, RR=32; let b=`<circle cx="${cx}" cy="${cy}" r="0" fill="rgba(255,90,78,.18)" stroke="#ff5a4e" stroke-width="1.5">${A("r",`0;${RR};${RR};0`,"0;.6;.94;1")}</circle>`;
+      for(let i=0;i<28;i++){ const x=8+r()*104, y=8+r()*68, d=Math.hypot(x-cx,y-cy);
+        b+=d<=RR?`<circle cx="${n1(x)}" cy="${n1(y)}" r="2.3" fill="#7d8f94">${sw("fill","#7d8f94","#ff5a4e",.6*d/RR)}</circle>`:`<circle cx="${n1(x)}" cy="${n1(y)}" r="2.3" fill="#a9b8bb"/>`; }
+      return svg(b+`<circle cx="${cx}" cy="${cy}" r="4.5" fill="#0b3b47" stroke="#fff" stroke-width="1.5"/>`); },
+    ()=>{ let b=""; for(const [fx,fy,sx,sy,col,st] of [[49,36,-30,36,"#2563eb",0],[71,36,150,36,"#168c48",.12],[60,55,60,120,"#ea7814",.24]]){ const kt=`0;${st};${f3(st+.18)};.94;1`;
+        b+=`<circle r="22" cx="${sx}" cy="${sy}" fill="${col}" fill-opacity=".28" stroke="${col}" stroke-width="1.2">${A("cx",`${sx};${sx};${fx};${fx};${sx}`,kt)}${A("cy",`${sy};${sy};${fy};${fy};${sy}`,kt)}</circle>`; }
+      b+=`<circle cx="60" cy="43" r="6" fill="none" stroke="#7c3aed" stroke-width="1.5" opacity="0">${A("opacity","0;0;1;0;1;0;0","0;.55;.6;.7;.75;.88;1")}${A("r","6;6;6;16;6;16;6","0;.55;.6;.7;.75;.88;1")}</circle>`;
+      return svg(b+`<path d="${STARP}" transform="translate(60,43) scale(.55)" fill="#7c3aed" stroke="#fff" opacity="0">${A("opacity","0;0;1;1;0","0;.55;.6;.94;1")}</path>`); },
+    ()=>{ const G=[[16,14,10],[100,18,7],[26,70,6],[104,70,2]], ST=[[235,244,252,1],[150,195,240,1],[70,120,215,1],[95,45,170,1]], C=cellsOf(12,8); let mx=0;
+      C.forEach(c=>{ let sw2=0,sv=0; c.nd=1e9; G.forEach(([gx,gy,v])=>{ const d=Math.hypot(c.cx-gx,c.cy-gy)||.1; sw2+=1/(d*d); sv+=v/(d*d); c.nd=Math.min(c.nd,d); }); c.v=sv/sw2; mx=Math.max(mx,c.nd); });
+      let b=C.map(c=>`<rect x="${n1(c.x)}" y="${n1(c.y)}" width="${n1(c.cw+.4)}" height="${n1(c.ch+.4)}" fill="${rgb(ramp(ST,c.v/11))}" opacity="0">${sw("opacity","0","0.9",.06+.6*c.nd/mx)}</rect>`).join("");
+      b+=G.map(([x,y,v])=>`<circle cx="${x}" cy="${y}" r="3" fill="#0b3b47" stroke="#fff"/><text x="${x}" y="${y-5}" font-size="7" font-weight="700" text-anchor="middle" fill="#0b3b47">${v}"</text>`).join("");
+      return svg(b); },
+    ()=>{ const C=cellsOf(8,6), r=rng(8); C.forEach(c=>{ c.z=2.9*Math.exp(-((c.i-2)**2+(c.j-3.5)**2)/3)-2.3*Math.exp(-((c.i-6)**2+(c.j-1)**2)/2.5)+(r()-.5)*.6; });
+      const rank=C.slice().sort((a,b)=>b.z-a.z); C.forEach(c=>c.rk=rank.indexOf(c));
+      const TE=[[240,249,248,1],[130,200,200,1],[11,59,71,1]];
+      const cls=z=>z>=1.9?"#d73027":z>=1.1?"#fc8d59":z<=-1.6?"#4575b4":z<=-.9?"#91bfdb":"#f4f4f4";
+      return svg(C.map(c=>{ const f1=.04+.26*c.i/8, f2=.45+.36*c.rk/C.length, cnt=rgb(ramp(TE,(c.z+2.5)/5.6)), bg="#eef4f4";
+        return `<rect x="${n1(c.x)}" y="${n1(c.y)}" width="${n1(c.cw)}" height="${n1(c.ch)}" fill="${bg}" stroke="#fff" stroke-width=".8">${A("fill",`${bg};${bg};${cnt};${cnt};${cls(c.z)};${cls(c.z)};${bg}`,`0;${f3(f1)};${f3(f1+.02)};${f3(f2)};${f3(f2+.02)};.94;1`)}</rect>`; }).join("")); },
+    ()=>{ const N={A:[10,60],B:[30,24],C:[34,72],D:[58,46],E:[62,14],F:[80,72],G:[88,34],H:[110,58],I:[106,14]};
+      const E="AB AC BD BE CD CF DE DG DF EG EI GH GI FH".split(" "), EX="AB AC CD BD BE CF DE DG DF EG GH".split(" "), RT="AC CD DG GH".split(" ");
+      const ln=(e,extra)=>{ const [a,b2]=[N[e[0]],N[e[1]]]; return `<line x1="${a[0]}" y1="${a[1]}" x2="${b2[0]}" y2="${b2[1]}" ${extra}`; };
+      let b=E.map(e=>ln(e,`stroke="#a9b8bb" stroke-width="1.3"/>`)).join("");
+      b+=EX.map((e,i)=>ln(e,`stroke="#f2b53a" stroke-width="2.4" stroke-linecap="round" opacity="0">${sw("opacity","0","1",.04+.4*i/EX.length)}</line>`)).join("");
+      b+=RT.map((e,i)=>{ const fs=.5+.08*i; return ln(e,`pathLength="1" stroke="#ff5a4e" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="1" stroke-dashoffset="1">${A("stroke-dashoffset","1;1;0;0;1",`0;${f3(fs)};${f3(fs+.08)};.94;1`)}</line>`); }).join("");
+      b+=Object.entries(N).map(([k,[x,y]])=>`<circle cx="${x}" cy="${y}" r="${k==="A"||k==="H"?4.5:3}" fill="${k==="A"?"#13804f":k==="H"?"#ff5a4e":"#0b3b47"}" stroke="#fff" stroke-width="1.2"/>`).join("");
+      return svg(b); },
+    ()=>{ const r=rng(12); let b=`<text x="60" y="10" font-size="7" font-family="ui-monospace,monospace" font-weight="700" text-anchor="middle" fill="#0b3b47">price ≤ $4 AND rating ≥ 4</text>`;
+      b+=`<rect x="-4" y="15" width="3" height="69" fill="#ff5a4e" opacity=".55">${A("x","-4;-4;122;122;-4","0;.08;.42;.94;1")}</rect>`;
+      for(let i=0;i<15;i++){ const x=10+r()*100, y=22+r()*56, m=r()<.4, f=.08+.34*(x/122);
+        b+=m?`<circle cx="${n1(x)}" cy="${n1(y)}" r="4" fill="#f08c28" stroke="#78400f" stroke-width="1">${A("r","4;4;7.5;5;5;4",`0;${f3(f)};${f3(f+.04)};${f3(f+.09)};.94;1`)}</circle>`
+             :`<circle cx="${n1(x)}" cy="${n1(y)}" r="4" fill="#f08c28" stroke="#78400f" stroke-width="1">${sw("opacity","1","0.25",f)}${sw("r","4","2.4",f)}</circle>`; }
+      return svg(b); },
+    ()=>{ const r=rng(31), CAN=["#4b2a7b","#8a5fb5","#c7b8d8","#f6a04d","#ff6a00"], P=[];
+      for(let j=0;j<5;j++) for(let i=0;i<8;i++) P.push({x:11+i*14,y:12+j*15,v:clamp(Math.round(1+4*(Math.exp(-((i-1.5)**2+(j-3)**2)/4)+.85*Math.exp(-((i-6)**2+(j-1)**2)/3))),1,5)});
+      const real=P.map(p=>p.v), shuf=()=>{ const a=real.slice(); for(let i=a.length-1;i>0;i--){ const k=Math.floor(r()*(i+1)); [a[i],a[k]]=[a[k],a[i]]; } return a; }, S=[shuf(),shuf(),shuf(),shuf()];
+      return svg(P.map((p,i)=>`<circle cx="${p.x}" cy="${p.y}" r="4.6" fill="${CAN[p.v-1]}" stroke="#fff" stroke-width="1"><animate attributeName="fill" values="${[...S.map(s=>CAN[s[i]-1]),CAN[p.v-1]].join(";")}" keyTimes="0;.12;.24;.36;.5" calcMode="discrete" dur="${D}s" repeatCount="indefinite"/></circle>`).join("")); },
+    ()=>{ const r=rng(44), gs=gaussOf(r), CL=[[36,52,16],[82,30,12],[62,44,6]]; let b=`<rect width="120" height="84" fill="#0d1f22"/><defs><radialGradient id="spGlow"><stop offset="0" stop-color="#fffbe0"/><stop offset=".35" stop-color="#e8ff6e" stop-opacity=".85"/><stop offset=".7" stop-color="#5fbf3c" stop-opacity=".35"/><stop offset="1" stop-color="#1e6e32" stop-opacity="0"/></radialGradient></defs>`;
+      b+=[[36,52,28,20],[82,30,24,17],[60,44,44,30]].map(([x,y,rx,ry],i)=>`<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="url(#spGlow)" opacity="0">${A("opacity",`0;0;${i===2?.45:.95};${i===2?.45:.95};0`,`0;${f3(.36+i*.05)};${f3(.6+i*.05)};.94;1`)}</ellipse>`).join("");
+      CL.forEach(([x,y,n])=>{ for(let i=0;i<n;i++){ const px=clamp(x+gs()*9,3,117), py=clamp(y+gs()*7,3,81), du=(1+r()*1.2).toFixed(2), bg=(r()*1.5).toFixed(2);
+        b+=`<circle cx="${n1(px)}" cy="${n1(py)}" r="1.3" fill="#f5ff8a"><animate attributeName="opacity" values="0;1;.2;1;0" dur="${du}s" begin="${bg}s" repeatCount="indefinite"/></circle>`; } });
+      return svg(b); },
+    ()=>{ let b=`<rect width="120" height="84" fill="#e7f2f6"/><defs><linearGradient id="spHill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7f4ec"/><stop offset=".35" stop-color="#c9d79a"/><stop offset="1" stop-color="#5f9a6a"/></linearGradient></defs>`;
+      b+=`<path d="M0,84 L0,30 C12,22 22,22 32,28 C52,40 70,56 92,64 C104,68 112,70 120,70 L120,84 Z" fill="url(#spHill)"/>`;
+      b+=[8,16,24].map(o=>`<path d="M0,${30+o} C12,${22+o} 22,${22+o} 32,${28+o} C52,${40+o} 70,${56+o} 92,${64+o}" fill="none" stroke="rgba(60,80,50,.18)" stroke-width=".8"/>`).join("");
+      const SP="M27,24 C50,36 70,52 92,60 C104,64 112,66 118,66";
+      b+=`<path d="${SP}" pathLength="1" fill="none" stroke="#ff5a4e" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="1" stroke-dashoffset="1">${A("stroke-dashoffset","1;1;0;0;1","0;.15;.72;.94;1")}</path>`;
+      b+=`<g><rect x="-4" y="-3" width="8" height="4" rx="1.5" fill="#ff5a4e" stroke="#fff" stroke-width=".8"/><circle cx="0" cy="-5" r="2" fill="#0b3b47"/><animateMotion dur="${D}s" repeatCount="indefinite" rotate="auto" keyPoints="0;0;1;1;0" keyTimes="0;.15;.72;.94;1" calcMode="linear" path="${SP}"/></g>`;
+      return svg(b+`<path d="M28,8 l3,6 h-6 z" fill="#0b3b47"/><line x1="28" y1="8" x2="28" y2="22" stroke="#0b3b47" stroke-width="1"/>`); },
+    ()=>{ const T=[[24,22,[232,74,138]],[94,20,[31,163,163]],[38,66,[240,138,36]],[98,64,[122,92,214]]], C=cellsOf(12,8); let mx=0;
+      C.forEach(c=>{ let bd=1e9; T.forEach(t=>{ const d=Math.hypot(c.cx-t[0],c.cy-t[1]); if(d<bd){ bd=d; c.t=t; } }); c.d=bd; mx=Math.max(mx,bd); });
+      let b=C.map(c=>`<rect x="${n1(c.x)}" y="${n1(c.y)}" width="${n1(c.cw+.4)}" height="${n1(c.ch+.4)}" fill="${rgb(c.t[2])}" opacity="0">${sw("opacity","0","0.5",.06+.6*c.d/mx)}</rect>`).join("");
+      return svg(b+T.map(([x,y,c])=>`<rect x="${x-5}" y="${y-5}" width="10" height="10" rx="2" fill="${rgb(c)}" stroke="#fff" stroke-width="1.6"/>`).join("")); }
+  ];
+})();
+function showSplash(){
+  const el=document.createElement("div"); el.id="splash"; el.setAttribute("role","dialog"); el.setAttribute("aria-modal","true"); el.setAttribute("aria-labelledby","spTitle");
+  el.innerHTML=`<div class="sp-in"><h1 id="spTitle">Spatial Analysis Lab</h1>
+    <p class="sp-tag">Ten quick map labs for use in K12 classrooms, about two minutes each.</p>
+    <div class="sp-grid">${SPL.map(([id,name,title],i)=>`<button class="sp-tile" data-id="${id}" style="--i:${i}" aria-label="Open lab ${i+1}: ${name}, ${title}">${SPLASH_SVG[i]()}<b>${i+1}. ${name}</b><small>${title}</small></button>`).join("")}</div>
+    <button class="btn sp-go" id="spGo">Start exploring</button>
+    <p class="sp-note">Click any animation to jump straight into that lab. Sound effects are ${SFX.on?"on":"off"}; use the Sound button to change it.</p></div>`;
+  document.body.appendChild(el);
+  if(reduce) el.querySelectorAll("svg").forEach(sv=>{ try{ sv.pauseAnimations(); sv.setCurrentTime(3.3); }catch(e){} });
+  const esc=e=>{ if(e.key==="Escape") close(); };
+  const close=id=>{ document.removeEventListener("keydown",esc); SFX.unlock(); SFX.whoosh(.6); el.classList.add("out"); setTimeout(()=>el.remove(),reduce?0:500);
+    if(id) location.hash=id; else $("sel").focus(); };
+  document.addEventListener("keydown",esc);
+  el.querySelectorAll(".sp-tile").forEach(b=>b.onclick=()=>close(b.dataset.id));
+  el.querySelector("#spGo").onclick=()=>close();
+  el.querySelector("#spGo").focus({preventScroll:true});
+}
+if(!SPL.some(([id])=>"#"+id===location.hash)) showSplash();
+
+/* ================= the ten labs ================= */
+const DEMOS=[];
+
+if(typeof window.require!=="function"){ $("err").style.display="grid"; }
+else require(["esri/Map","esri/views/MapView","esri/Graphic","esri/layers/GraphicsLayer","esri/geometry/Point","esri/geometry/Polygon","esri/geometry/Polyline","esri/geometry/Multipoint","esri/geometry/geometryEngine","esri/layers/ElevationLayer","esri/request"],
+(Map, MapView, Graphic, GraphicsLayer, Point, Polygon, Polyline, Multipoint, geometryEngine, ElevationLayer, esriRequest) => {
+  const STRUCTURES="https://services2.arcgis.com/FiaPA4ga0iQKduv3/arcgis/rest/services/USA_Structures_View/FeatureServer/0/query";
+
+  const SR={wkid:102100};
+  const P=(lon,lat)=>{ const [x,y]=toWM(lon,lat); return new Point({x,y,spatialReference:SR}); };
+  const PX=(x,y)=>new Point({x,y,spatialReference:SR});
+  const POLY=ring=>new Polygon({rings:[ring],spatialReference:SR});
+  const LINE=lls=>new Polyline({paths:[lls.map(([lon,lat])=>toWM(lon,lat))],spatialReference:SR});
+  const G=(geometry,symbol,attributes)=>new Graphic({geometry,symbol,attributes});
+  const circle=(lon,lat,m)=>geometryEngine.geodesicBuffer(P(lon,lat),m,"miles");
+  /* attach a pop-up to a marker: pop(g,"Title","text") or pop(g,()=>({t,d})) */
+  const pop=(g,t,d)=>{ g.pop=typeof t==="function"?t:()=>({t,d}); return g; };
+  const STAR="M0,-10 L2.9,-4 L9.5,-3.1 L4.7,1.5 L5.9,8.1 L0,5 L-5.9,8.1 L-4.7,1.5 L-9.5,-3.1 L-2.9,-4 Z";
+  const SYM={
+    pt:(c,size=8,o=[255,255,255,1],ow=1,style="circle")=>({type:"simple-marker",style,size,color:c,outline:{color:o,width:ow}}),
+    star:(c,size=22)=>({type:"simple-marker",style:"path",path:STAR,size,color:c,outline:{color:[255,255,255,1],width:1.5}}),
+    fill:(c,o=[0,0,0,0],w=0)=>({type:"simple-fill",color:c,outline:{color:o,width:w}}),
+    line:(c,w=2,style="solid")=>({type:"simple-line",color:c,width:w,style,cap:"round",join:"round"}),
+    txt:(t,c=[16,38,44,1],size=10,yo=0,bold=false)=>({type:"text",text:t,color:c,haloColor:[255,255,255,.95],haloSize:1.5,yoffset:yo,font:{size,weight:bold?"bold":"normal"}})
+  };
+
+  /* ---------- map ---------- */
+  let curBase="gray-vector";
+  const map=new Map({basemap:curBase});
+  const view=new MapView({container:"viewDiv",map,center:P(-96,38.5),zoom:4,popupEnabled:false,
+    constraints:{minZoom:3,maxZoom:18,rotationEnabled:false},ui:{components:["zoom","attribution"]}});
+  view.when(null,()=>{ $("err").style.display="grid"; });
+  const setBase=b=>{ if(b!==curBase){ curBase=b; map.basemap=b; } };
+
+  /* ---------- lab engine ---------- */
+  const L={run:0,demo:null,layers:[],click:null,keys:{},finished:false};
+  /* ---------- marker pop-ups ---------- */
+  let popG=null;
+  const popEl=$("pop");
+  function hidePop(){ popG=null; popEl.style.display="none"; }
+  function placePop(){ if(!popG) return; const s=view.toScreen(popG.geometry); if(!s){ hidePop(); return; }
+    const W=view.width, bw=popEl.offsetWidth, left=clamp(s.x,bw/2+8,W-bw/2-8);
+    popEl.classList.toggle("below",s.y<popEl.offsetHeight+30);
+    popEl.style.left=left+"px"; popEl.style.top=s.y+"px"; popEl.style.setProperty("--ax",(s.x-left+bw/2)+"px"); }
+  function showPop(g){ const c=g.pop(); popG=g; popEl.innerHTML=`<button class="x" aria-label="Close">×</button><b>${c.t}</b>${c.d?`<p>${c.d}</p>`:""}`;
+    popEl.style.display="block"; popEl.querySelector(".x").onclick=hidePop; placePop(); SFX.click(); }
+  function hitMarker(sx,sy){ let best=null, bd=1e9;
+    for(let li=L.layers.length-1;li>=0;li--){ const l=L.layers[li]; if(!l.visible||l.opacity<.05) continue;
+      l.graphics.forEach(g=>{ if(!g.pop||!g.geometry||g.geometry.type!=="point") return; const s=view.toScreen(g.geometry); if(!s) return;
+        const r=Math.max(8,((g.symbol&&g.symbol.size)||8)*1.333/2+2), d=Math.hypot(s.x-sx,s.y-sy); if(d<=r&&d<bd){ bd=d; best=g; } }); }
+    return best; }
+  view.watch("extent",placePop);
+  addEventListener("keydown",e=>{ if(e.key==="Escape") hidePop(); });
+
+  function stop(){ hidePop(); L.run++; L.keys={}; L.layers.forEach(l=>map.remove(l)); L.layers=[]; L.click=null; L.finished=false; hint(null); chip(null); legend(null); $("fx").innerHTML=""; }
+  function rail(names,step){ $("steps").innerHTML=names.map((s,i)=>`<li class="${i<step?"done":i===step?"now":""}"><span>${i<step?"✓":i+1}</span>${s}</li>`).join(""); }
+  function setCard(html){ const c=$("card"); c.innerHTML=html; c.style.animation="none"; void c.offsetWidth; c.style.animation=""; }
+
+  view.on("click",ev=>{ if(!ev.mapPoint) return; const hit=hitMarker(ev.x,ev.y);
+    if(hit) showPop(hit); else hidePop();
+    if(L.click&&(!hit||L.clickMarkers)) L.click({lon:ev.mapPoint.longitude,lat:ev.mapPoint.latitude,sx:ev.x,sy:ev.y,x:ev.mapPoint.x,y:ev.mapPoint.y,hit}); });
+
+  function ctxFor(d){
+    const run=L.run, alive=()=>run===L.run;
+    const x={
+      alive, sfx:SFX, hint, chip, legend, confetti, snowfall, flash, burst,
+      layer(o={}){ const l=new GraphicsLayer(o); map.add(l); L.layers.push(l); return l; },
+      anim(ms,fn,key){ const tok=key?(L.keys[key]=(L.keys[key]||0)+1):0;
+        return new Promise(res=>{ const t0=performance.now(), dur=reduce?0:ms;
+          const tick=now=>{ if(!alive()||(key&&L.keys[key]!==tok)) return; const k=dur?clamp((now-t0)/dur,0,1):1; fn(k); if(k<1) requestAnimationFrame(tick); else res(); };
+          requestAnimationFrame(tick); }); },
+      wait(ms){ return new Promise(res=>setTimeout(()=>{ if(alive()) res(); }, reduce?0:ms)); },
+      click(fn,opt={}){ L.click=fn; L.clickMarkers=opt.markers!==false; },
+      unpop(){ hidePop(); },
+      step(i,html){ hidePop(); rail(d.steps,i); setCard(html); },
+      q(sel){ return $("card").querySelector(sel); },
+      on(sel,fn){ const e=$("card").querySelector(sel); if(e) e.onclick=fn; return e; },
+      nearest(items,c,px=28){ let best=null,bd=px; for(const it of items){ const s=view.toScreen(P(it.lon,it.lat)); if(!s) continue; const dd=Math.hypot(s.x-c.sx,s.y-c.sy); if(dd<=bd){bd=dd;best=it;} } return best; },
+      screen(lon,lat){ return view.toScreen(P(lon,lat)); },
+      goTo(t,ms=1200){ return view.goTo(t,{duration:reduce?0:ms}).catch(()=>{}); },
+      done(html){
+        if(L.finished) return; L.finished=true; rail(d.steps,3); SFX.win(); confetti(); hint(null);
+        const i=DEMOS.indexOf(d), nx=[1,2,3].map(k=>DEMOS[(i+k)%DEMOS.length]);
+        $("card").insertAdjacentHTML("beforeend",`<div class="note win">${html}</div>
+          <p class="muted">Real GIS tool: <b>${d.tool}</b></p>
+          <div class="row"><button class="btn ghost" id="again">Do it again</button></div>
+          <h3>Try another analysis</h3>${nx.map(n=>`<a class="lab-link" href="#${n.id}"><span class="num">${n.n}</span><span><b>${n.name}</b><small>${n.title}</small></span></a>`).join("")}`);
+        $("again").onclick=()=>start(d);
+        const last=$("card").querySelector(".win"); if(last&&last.scrollIntoView) last.scrollIntoView({block:"nearest",behavior:reduce?"auto":"smooth"});
+      }
+    };
+    return x;
+  }
+  function start(d){
+    stop(); L.demo=d; $("sel").value=d.id; $("title").textContent=`${d.n}. ${d.name}`; $("what").textContent=d.what;
+    document.title=`${d.name} · Spatial Analysis Lab`;
+    setBase(d.basemap||"gray-vector"); view.constraints.maxZoom=18;
+    view.goTo({target:P(...d.center),zoom:d.zoom-(view.width<600?1:0)},{duration:reduce?0:900}).catch(()=>{});
+    d.start(ctxFor(d));
+  }
+  function home(){
+    stop(); L.demo=null; $("sel").value=""; $("title").textContent="Spatial Analysis Lab"; document.title="Spatial Analysis Lab";
+    $("what").textContent="Ten quick, hands-on labs, about two minutes each. Pick any one, any time, from the menu above or the list below.";
+    $("steps").innerHTML="";
+    setCard(`<h2>Pick an analysis</h2><div class="labs">${DEMOS.map(d=>`<a class="lab-link" href="#${d.id}"><span class="num">${d.n}</span><span><b>${d.name}</b><small>${d.title}: ${d.blurb}</small></span></a>`).join("")}</div>`);
+    setBase("gray-vector");
+    view.constraints.maxZoom=18; view.goTo({target:P(-96,38.5),zoom:view.width<600?3:4},{duration:reduce?0:900}).catch(()=>{});
+  }
+  function route(){ const d=DEMOS.find(x=>x.id===location.hash.slice(1)); d?start(d):home(); }
+
+  /* ======================================================================
+     1. BUFFER — skate park reach (Springfield, IL)
+     ====================================================================== */
+  DEMOS.push({id:"buffer",n:1,name:"Buffer",title:"Skate park reach",blurb:"how many teens live close to a new skate park?",
+    what:"A buffer draws a zone at a set distance around a feature. Everything inside the zone is within that distance.",
+    tool:"Create Buffers (Map Viewer → Analysis → Tools → Use proximity)",steps:["Drop","Stretch","Beat the goal"],
+    basemap:"gray-vector",center:[-89.662,39.799],zoom:13,
+    start(x){
+      const r=rng(20261124), gs=gaussOf(r), H=[];
+      [[-89.700,39.790,40],[-89.664,39.816,34],[-89.626,39.781,28],[-89.641,39.826,22],[-89.690,39.770,26]].forEach(([lo,la,n])=>{ for(let i=0;i<n;i++) H.push({lon:lo+gs()*.0075,lat:la+gs()*.0052}); });
+      for(let i=0;i<20;i++) H.push({lon:-89.725+r()*.13,lat:39.762+r()*.072});
+      const within=(c,dd)=>H.reduce((n,h)=>n+(mi(c,h)<=dd),0);
+      let best={n:0}; for(let lo=-89.73;lo<=-89.59;lo+=.003) for(let la=39.76;la<=39.84;la+=.003){ const n=within({lon:lo,lat:la},1); if(n>best.n) best={n,lon:lo,lat:la}; }
+      const GOAL=Math.round(best.n*.75);
+      const bufL=x.layer(), homeL=x.layer(), parkL=x.layer();
+      const OUT=SYM.pt([16,38,44,.55],7,[255,255,255,.8],.75), IN=SYM.pt([255,90,78,1],10,[255,255,255,1],1.25);
+      const BUF=SYM.fill([255,90,78,.16],[255,90,78,1],2.5), WIN=SYM.fill([19,128,79,.22],[19,128,79,1],3);
+      const hg=H.map(h=>{ const g=pop(G(P(h.lon,h.lat),OUT),"Teen's home","A teenager lives here."); g.h=h; g.on=false; return g; }); homeL.addMany(hg);
+      const bufG=G(null,BUF), parkG=pop(G(null,SYM.pt([11,59,71,1],18,[255,255,255,1],3)),"Skate park","The new skate park you placed.");
+      x.legend([["rgba(16,38,44,.6)","Teen home"],["#ff5a4e","Inside the buffer"],["#0b3b47","Skate park"]]);
+      let c=null, R=0, prev=0, step=0, dist=.5, moved=false, won=false, tries=0;
+      const draw=rad=>{ R=rad;
+        if(!c||rad<.001) bufL.remove(bufG); else { bufG.geometry=geometryEngine.geodesicBuffer(P(c.lon,c.lat),rad,"miles"); if(!bufL.graphics.includes(bufG)) bufL.add(bufG); }
+        let n=0; for(const g of hg){ const on=!!c&&g.d<=rad; if(on) n++; if(on!==g.on){ g.on=on; g.symbol=on?IN:OUT; } }
+        if(n>prev) x.sfx.tick(); prev=n;
+        x.chip(c?`<b>${n}</b> homes inside · ${rad.toFixed(2)} mi`:null);
+        const s=x.q("#statN"); if(s) s.textContent=n;
+        const m=x.q("#meterI"); if(m) m.style.width=Math.min(100,n/(step===2?best.n:H.length)*100)+"%";
+        return n; };
+      const grow=(to,from,ms)=>x.anim(ms,k=>draw(from+(to-from)*ease(k)),"buf");
+      const place=p=>{ c=p; hg.forEach(g=>g.d=mi(p,g.h)); parkG.geometry=P(p.lon,p.lat); bufG.symbol=BUF; if(!parkL.graphics.includes(parkG)) parkL.add(parkG); x.sfx.pop();
+        x.anim(350,k=>{ parkG.symbol=SYM.pt([11,59,71,1],Math.max(2,k<.6?26*k/.6:26-8*(k-.6)/.4),[255,255,255,1],3); },"park"); };
+      const finish=n=>{ won=true; x.hint(null); bufG.symbol=WIN;
+        x.done(`<b>Goal met!</b> ${n} teen homes are within 1 mile of your skate park. Planners use buffers like this to choose sites for parks, schools, and fire stations.`); };
+      const s0=()=>{ step=0; x.step(0,`<h2>Drop a skate park</h2><p>Each dot is a teen's home (sample data). <b>Click the map</b> to drop a skate park and watch its buffer grow.</p>`); x.hint("Click the map to drop a skate park"); };
+      const s1=()=>{ step=1; x.hint(null);
+        x.step(1,`<h2>Stretch the buffer</h2><p>Drag the slider. Watch homes light up as the buffer grows.</p>
+          <label class="sl" for="dist">Distance: <span class="big" id="distOut"></span></label>
+          <input type="range" id="dist" min="0.25" max="2" step="0.25" value="${dist}">
+          <div class="stat"><b id="statN">0</b><span>of ${H.length} homes inside</span></div><div class="meter"><i id="meterI"></i></div>
+          <div class="note">Double the distance and the buffer covers <b>4× the area</b>.</div>
+          <div class="row"><button class="btn" id="next" ${moved?"":"disabled"}>Next →</button><span class="muted" id="why">${moved?"":"Move the slider first"}</span></div>`);
+        const out=()=>{ x.q("#distOut").textContent=`${dist.toFixed(2)} mi (${(dist*1.609).toFixed(2)} km)`; }; out();
+        x.q("#dist").oninput=e=>{ const to=+e.target.value; dist=to; out(); x.sfx.click(); grow(to,R,350);
+          if(!moved){ moved=true; x.q("#next").disabled=false; x.q("#why").textContent=""; } };
+        x.on("#next",s2); draw(R); };
+      const s2=async()=>{ step=2; x.hint("Click the map to move the park");
+        x.step(2,`<h2>Beat the goal: ${GOAL} homes</h2><p>Most teens will walk up to <b>1 mile</b>. Click the map to move the park until at least <b>${GOAL} homes</b> are inside the buffer.</p>
+          <div class="stat"><b id="statN">0</b><span>homes inside · goal ${GOAL}</span></div>
+          <div class="meter"><i id="meterI"></i><u style="left:${GOAL/best.n*100}%"></u></div><div id="fb"></div>`);
+        x.sfx.whoosh(.5); await grow(1,R,500);
+        const n=within(c,1);
+        if(n>=GOAL && !won){ won=true; x.hint(null); bufG.symbol=WIN; x.sfx.ding();
+          x.q("#fb").innerHTML=`<div class="note win"><b>Already there!</b> Your park's 1-mile buffer holds ${n} homes, beating the goal of ${GOAL}.</div><div class="row"><button class="btn" id="fin">Next →</button></div>`;
+          x.on("#fin",()=>{ won=false; finish(n); }); } };
+      x.click(async p=>{
+        if(won||L.finished) return;
+        place(p);
+        if(step===0){ s1(); x.sfx.whoosh(.6); await grow(.5,0,700); return; }
+        if(step===1){ await grow(dist,0,500); return; }
+        tries++; await grow(1,0,500);
+        const n=within(p,1);
+        if(n>=GOAL){ x.sfx.ding(); finish(n); }
+        else { x.sfx.miss(); x.q("#fb").innerHTML=`<p class="note">${n} home${n===1?"":"s"} inside. ${GOAL-n} more to go.${tries>=2?" <b>Tip:</b> aim for where the dots bunch together.":""}</p>`; }
+      });
+      s0();
+    }});
+
+  /* ======================================================================
+     2. OVERLAY — perfect hangout spot (Kansas City)
+     ====================================================================== */
+  DEMOS.push({id:"overlay",n:2,name:"Overlay",title:"Perfect hangout spot",blurb:"find where Wi-Fi, shade, and food trucks all overlap.",
+    what:"Overlay stacks map layers on top of each other to find the places where all the conditions you need are true.",
+    tool:"Overlay Layers (Map Viewer → Analysis)",steps:["Stack","Intersect","Claim it"],
+    basemap:"gray-vector",center:[-94.592,39.040],zoom:13,
+    start(x){
+      const LAY=[
+        {name:"Free Wi-Fi",word:"Wi-Fi",color:[37,99,235],r:.35,pt:["Free Wi-Fi spot","A library or café with free Wi-Fi."],pts:[[-94.593,39.042],[-94.615,39.050],[-94.570,39.055],[-94.605,39.025]]},
+        {name:"Shade trees",word:"shade",color:[22,140,72],r:.5,pt:["Shady park","A park full of big shade trees."],pts:[[-94.586,39.036],[-94.620,39.030],[-94.575,39.020]]},
+        {name:"Food truck stops",word:"food",color:[234,120,20],r:.4,pt:["Food truck stop","Food trucks park here at lunchtime."],pts:[[-94.588,39.045],[-94.560,39.035],[-94.610,39.058]]}];
+      LAY.forEach(l=>{ l.geom=geometryEngine.union(l.pts.map(p=>circle(p[0],p[1],l.r))); l.layer=x.layer({opacity:0}); l.on=false;
+        l.layer.add(G(l.geom,SYM.fill([...l.color,.3],[...l.color,.95],2)));
+        l.pts.forEach(p=>l.layer.add(pop(G(P(p[0],p[1]),SYM.pt([...l.color,1],9,[255,255,255,1],1.5)),...l.pt))); });
+      const resL=x.layer(), flagL=x.layer();
+      x.legend(LAY.map(l=>[css(l.color),l.name,"sq"]));
+      let result=null, n=0;
+      const s0=()=>{ x.step(0,`<h2>Stack the layers</h2><p>Your perfect hangout spot needs <b>free Wi-Fi</b> AND <b>shade</b> AND a <b>food truck</b> close by. Add each layer to the map.</p>
+          ${LAY.map((l,i)=>`<button class="opt" data-i="${i}"><span class="sw" style="background:${css(l.color)}"></span>Add ${l.name}</button>`).join("")}
+          <div class="row"><button class="btn" id="next" disabled>Next →</button></div>`);
+        $("card").querySelectorAll(".opt").forEach(b=>b.onclick=()=>{ const l=LAY[+b.dataset.i]; if(l.on) return; l.on=true; n++;
+          b.disabled=true; b.classList.add("picked"); b.innerHTML=`<span class="sw" style="background:${css(l.color)}"></span>✓ ${l.name} added`;
+          x.sfx.whoosh(.5); x.anim(600,k=>{ l.layer.opacity=ease(k); },"lay"+b.dataset.i);
+          if(n===3){ x.q("#next").disabled=false; x.sfx.ding(); } });
+        x.on("#next",s1); };
+      const s1=()=>{ x.step(1,`<h2>Run Intersect</h2><p>Intersect keeps only the places where the layers overlap. It's like asking: where is it Wi-Fi <b>AND</b> shade <b>AND</b> food?</p>
+          <div class="row"><button class="btn" id="run">Run Intersect</button></div><div id="out"></div>`);
+        x.on("#run",async()=>{ x.q("#run").disabled=true; x.sfx.whoosh(.6);
+          LAY.forEach((l,i)=>x.anim(600,k=>{ l.layer.opacity=1-.65*k; },"lay"+i));
+          const a=geometryEngine.intersect(LAY[0].geom,LAY[1].geom), g=G(a,SYM.fill([124,58,237,.35],[124,58,237,1],2.5)); resL.add(g);
+          x.q("#out").innerHTML=`<p class="note">Wi-Fi <b>AND</b> shade: the purple patches.</p>`;
+          await x.wait(1100);
+          result=geometryEngine.intersect(a,LAY[2].geom); g.geometry=result; x.sfx.ding();
+          x.anim(1400,k=>{ g.symbol=SYM.fill([124,58,237,.25+.4*Math.abs(Math.sin(k*Math.PI*3))],[124,58,237,1],3); },"pulse");
+          const ac=geometryEngine.geodesicArea(result,"acres");
+          x.q("#out").innerHTML=`<p class="note win">Wi-Fi <b>AND</b> shade <b>AND</b> food: only <b>${Math.round(ac)} acres</b> qualify, about ${Math.round(ac/1.32)} football fields.</p><div class="row"><button class="btn" id="next">Next →</button></div>`;
+          x.on("#next",s2); }); };
+      const s2=()=>{ x.step(2,`<h2>Claim your spot</h2><p><b>Click inside the purple zone</b> to claim your hangout spot.</p><div id="fb"></div>`); x.hint("Click inside the purple zone");
+        x.click(p=>{ if(L.finished) return; const pt=P(p.lon,p.lat);
+          if(geometryEngine.contains(result,pt)){ flagL.removeAll(); flagL.add(pop(G(pt,SYM.star([124,58,237,1],26)),"Your hangout spot","Free Wi-Fi, shade, and food, all in one place.")); x.sfx.pop(); x.q("#fb").innerHTML="";
+            x.done(`<b>Spot claimed!</b> It has free Wi-Fi, shade, and food all at once. City planners overlay layers like this to find sites that meet many rules.`); }
+          else { x.sfx.miss(); x.q("#fb").innerHTML=`<p class="note">This spot has: ${LAY.map(l=>`${l.word} ${geometryEngine.contains(l.geom,pt)?"✓":"✗"}`).join(", ")}. It needs all three.</p>`; } }); };
+      s0();
+    }});
+
+  /* ======================================================================
+     3. INTERPOLATION — snow day predictor (Minneapolis)
+     ====================================================================== */
+  DEMOS.push({id:"interpolation",n:3,name:"Interpolation",title:"Snow day predictor",blurb:"estimate the snow at your school from nearby gauges.",
+    what:"Interpolation estimates values in the places between your measurements, using the measured points nearby.",
+    tool:"Interpolate Points (Map Viewer → Analysis)",steps:["Predict","Interpolate","Snow day?"],
+    basemap:"gray-vector",center:[-93.27,44.975],zoom:11,
+    start(x){
+      const GA=[[-93.40,45.05,11],[-93.30,45.06,9.5],[-93.18,45.05,7],[-93.36,44.98,9],[-93.27,45.00,8],[-93.15,44.98,5.5],[-93.38,44.90,6.5],[-93.25,44.91,5],[-93.13,44.90,3],[-93.31,44.94,7.5],[-93.20,44.95,6]].map(([lon,lat,v])=>({lon,lat,v}));
+      const SCHOOL={lon:-93.29,lat:44.97};
+      const idw=p=>{ let sw=0,sv=0; for(const g of GA){ const dd=mi(p,g); if(dd<1e-4) return g.v; const w=1/(dd*dd); sw+=w; sv+=w*g.v; } return sv/sw; };
+      const STOPS=[[235,244,252,.35],[150,195,240,.55],[70,120,215,.65],[95,45,170,.72]];
+      const grid=makeGrid({w:-93.44,e:-93.10,s:44.88,n:45.075},34,26);
+      const cellL=x.layer(), gaugeL=x.layer(), schoolL=x.layer();
+      const cg=grid.cells.map(c=>{ c.v=idw(c); c.near=Math.min(...GA.map(g=>mi(c,g))); const g=G(POLY(c.ring),SYM.fill([0,0,0,0])); return g; });
+      cellL.addMany(cg);
+      GA.forEach(g=>{ gaugeL.add(pop(G(P(g.lon,g.lat),SYM.pt([11,59,71,1],10,[255,255,255,1],2)),"Snow gauge",`This gauge measured ${g.v} inches of snow.`)); gaugeL.add(G(P(g.lon,g.lat),SYM.txt(`${g.v} in`,[11,59,71,1],11,10,true))); });
+      schoolL.add(pop(G(P(SCHOOL.lon,SCHOOL.lat),SYM.star([255,90,78,1],26)),"Your school","There's no snow gauge here."));
+      x.legend([["#0b3b47","Snow gauge (inches)"],["#ff5a4e","Your school"]]);
+      let guess=4;
+      const s0=()=>{ x.step(0,`<h2>Predict</h2><p>Snow gauges measured last night's snow in inches. Your school (red star) has no gauge. If <b>6 inches or more</b> means a snow day, how much fell at school?</p>
+          <label class="sl" for="g">My guess: <span class="big" id="gOut"></span></label><input type="range" id="g" min="0" max="14" step="0.5" value="${guess}">
+          <div class="row"><button class="btn" id="lock">Lock in my guess</button></div>`);
+        const out=()=>{ x.q("#gOut").textContent=`${guess.toFixed(1)} in`; }; out();
+        x.q("#g").oninput=e=>{ guess=+e.target.value; out(); x.sfx.tick(); };
+        x.on("#lock",()=>{ x.sfx.pop(); s1(); }); };
+      const s1=()=>{ x.step(1,`<h2>Interpolate</h2><p>IDW (inverse distance weighting) estimates every spot from the gauges around it. <b>Closer gauges count more.</b></p>
+          <div class="row"><button class="btn" id="run">Fill the map with IDW</button></div>`);
+        x.on("#run",async()=>{ x.q("#run").disabled=true; x.sfx.whoosh(1.2);
+          const order=grid.cells.map((c,i)=>i).sort((a,b)=>grid.cells[a].near-grid.cells[b].near); let k0=0;
+          await x.anim(1500,k=>{ const k1=Math.floor(ease(k)*order.length); for(let q=k0;q<k1;q++){ const i=order[q]; cg[i].symbol=SYM.fill(ramp(STOPS,grid.cells[i].v/12)); } if(k1>k0) x.sfx.tick(); k0=k1; },"fill");
+          x.legend([[css(ramp(STOPS,.1)),"0–2 in","sq"],[css(ramp(STOPS,.35)),"about 4 in","sq"],[css(ramp(STOPS,.6)),"about 7 in","sq"],[css(ramp(STOPS,.95)),"11+ in","sq"],["#ff5a4e","Your school"]]);
+          await x.wait(300); s2(); }); };
+      const s2=()=>{ const est=idw(SCHOOL), off=Math.abs(est-guess), snow=est>=6;
+        x.step(2,`<h2>${snow?"Snow day!":"No snow day"}</h2><div class="stat"><b>${fmt1(est)} in</b><span>estimated at your school</span></div>
+          <p>Your guess: <b>${guess.toFixed(1)} in</b> (off by ${fmt1(off)} in). ${off<=1?"Great forecasting!":"IDW used every gauge, weighted by distance."}</p>
+          <p class="muted">Click anywhere on the map to check the estimated snow there.</p>`);
+        if(snow){ x.snowfall(); x.burst("SNOW DAY!"); x.sfx.snow(); }
+        x.click(p=>{ x.sfx.click(); x.chip(`About <b>${fmt1(idw(p))} in</b> of snow here`); });
+        x.done(`<b>You interpolated!</b> You turned ${GA.length} gauge readings into a snow estimate for every spot on the map. Weather forecasters and scientists do this with temperatures, rain, and air quality.`); };
+      s0();
+    }});
+
+  /* ======================================================================
+     4. HOT SPOTS — cleanup crew (Indianapolis)
+     ====================================================================== */
+  DEMOS.push({id:"hotspots",n:4,name:"Hot spots",title:"Cleanup crew",blurb:"find where litter reports are really clustered.",
+    what:"Hot spot analysis tests whether a cluster of high values is real or could just be random chance.",
+    tool:"Find Hot Spots (Map Viewer → Analysis)",steps:["Guess","Count","Test"],
+    basemap:"gray-vector",center:[-86.158,39.7685],zoom:14,
+    start(x){
+      const r=rng(77), gs=gaussOf(r), pts=[];
+      for(let i=0;i<70;i++) pts.push({lon:-86.170+gs()*.003,lat:39.775+gs()*.0022});
+      for(let i=0;i<50;i++) pts.push({lon:-86.140+gs()*.004,lat:39.760+gs()*.003});
+      for(let i=0;i<110;i++) pts.push({lon:-86.19+r()*.065,lat:39.752+r()*.033});
+      const B={w:-86.19,e:-86.125,s:39.752,n:39.785}, grid=makeGrid(B,16,10), cells=grid.cells;
+      const inB=pts.filter(p=>p.lon>B.w&&p.lon<B.e&&p.lat>B.s&&p.lat<B.n);
+      cells.forEach(c=>c.n=0); inB.forEach(p=>{ const [X,Y]=toWM(p.lon,p.lat), c=grid.at(X,Y); if(c) c.n++; });
+      const N=cells.length, mean=cells.reduce((s,c)=>s+c.n,0)/N, S=Math.sqrt(cells.reduce((s,c)=>s+c.n*c.n,0)/N-mean*mean);
+      cells.forEach(c=>{ let sw=0,sx=0; for(let dj=-1;dj<=1;dj++) for(let di=-1;di<=1;di++){ const o=grid.get(c.i+di,c.j+dj); if(o){ sw++; sx+=o.n; } }
+        c.z=(sx-mean*sw)/(S*Math.sqrt((N*sw-sw*sw)/(N-1))); });
+      const CLS=[[2.58,[215,48,39],"Hot spot (99% sure)"],[1.96,[244,109,67],"Hot spot (95% sure)"],[1.65,[253,174,97],"Hot spot (90% sure)"],[-1.65,[240,240,240],"Not significant"],[-1.96,[171,217,233],"Cold spot (90%)"],[-2.58,[116,173,209],"Cold spot (95%)"],[-99,[69,117,180],"Cold spot (99%)"]];
+      const cls=z=>z>=2.58?0:z>=1.96?1:z>=1.65?2:z>-1.65?3:z>-1.96?4:z>-2.58?5:6;
+      const cellL=x.layer(), ptL=x.layer(), flagL=x.layer();
+      const cg=cells.map(c=>G(POLY(c.ring),SYM.fill([0,0,0,0]))); cellL.addMany(cg);
+      const maxN=Math.max(...cells.map(c=>c.n));
+      let guess=null;
+      x.legend([["#2a7f62","Litter report"]]);
+      const s0=async()=>{ x.step(0,`<h2>Where's the mess?</h2><p>Each dot is a litter report from a (pretend) cleanup app. Your crew has one morning. <b>Click where you'd start the cleanup.</b></p><div id="fb"></div>`);
+        const order=inB.map((p,i)=>i).sort(()=>r()-.5); let k0=0;
+        x.anim(1500,k=>{ const k1=Math.floor(k*order.length); for(let q=k0;q<k1;q++){ const p=inB[order[q]]; ptL.add(pop(G(P(p.lon,p.lat),SYM.pt([42,127,98,.85],6,[255,255,255,.9],.75)),"Litter report","Someone reported trash here.")); } if(k1>k0) x.sfx.tick(); k0=k1; },"rain");
+        x.hint("Click where you'd send the crew");
+        x.click(p=>{ guess=p; flagL.removeAll(); flagL.add(pop(G(P(p.lon,p.lat),SYM.star([255,90,78,1],26)),"Crew starting spot","Where you chose to start the cleanup.")); x.sfx.pop(); x.click(null); x.hint(null); s1(); }); };
+      const s1=()=>{ x.step(1,`<h2>Count in squares</h2><p>Dots pile on top of each other, so eyes get fooled. GIS counts the reports inside equal squares instead.</p>
+          <div class="row"><button class="btn" id="run">Count the reports</button></div><div id="out"></div>`);
+        x.on("#run",async()=>{ x.q("#run").disabled=true; x.sfx.whoosh(.9); x.anim(600,k=>{ ptL.opacity=1-.75*k; },"pts");
+          const STOPS=[[245,250,250,.45],[130,200,200,.6],[11,59,71,.75]]; let k0=0;
+          const order=cells.map((c,i)=>i).sort((a,b)=>cells[a].i-cells[b].i||cells[a].j-cells[b].j);
+          await x.anim(1200,k=>{ const k1=Math.floor(k*order.length); for(let q=k0;q<k1;q++){ const i=order[q]; cg[i].symbol=SYM.fill(ramp(STOPS,cells[i].n/maxN),[255,255,255,.6],.5); } if(k1>k0) x.sfx.tick(); k0=k1; },"count");
+          x.legend([[css(ramp(STOPS,0)),"0 reports","sq"],[css(ramp(STOPS,.5)),`about ${Math.round(maxN/2)}`,"sq"],[css(ramp(STOPS,1)),`${maxN} reports`,"sq"],["#ff5a4e","Your guess"]]);
+          x.q("#out").innerHTML=`<p class="note">The busiest square has <b>${maxN}</b> reports. But is a busy area a <i>real</i> cluster, or luck?</p><div class="row"><button class="btn" id="next">Next →</button></div>`;
+          x.on("#next",s2); }); };
+      const s2=()=>{ x.step(2,`<h2>Run the hot spot test</h2><p>The test (Getis-Ord Gi*) compares each square <b>and its neighbors</b> with the whole map. Hot spots are areas that are too busy to be random.</p>
+          <div class="row"><button class="btn" id="run">Find hot spots</button></div>`);
+        x.on("#run",async()=>{ x.q("#run").disabled=true; x.sfx.whoosh(1);
+          const order=cells.map((c,i)=>i).sort((a,b)=>cells[b].z-cells[a].z); let k0=0;
+          await x.anim(1400,k=>{ const k1=Math.floor(k*order.length); for(let q=k0;q<k1;q++){ const i=order[q], k2=cls(cells[i].z), col=CLS[k2][1]; cg[i].symbol=SYM.fill([...col,k2===3?.25:.72],[255,255,255,.7],.5); } if(k1>k0) x.sfx.tick(); k0=k1; },"hot");
+          x.legend([...CLS.filter((c,i)=>cells.some(cc=>cls(cc.z)===i)).map(c=>[css(c[1]),c[2],"sq"]),["#ff5a4e","Your guess"]]);
+          const [GX,GY]=toWM(guess.lon,guess.lat), gc=grid.at(GX,GY), gk=gc?cls(gc.z):3, hits=cells.filter(c=>c.z>=1.96).length;
+          x.done(gk<=1?`<b>Nailed it!</b> Your crew starts in a hot spot (${CLS[gk][2].toLowerCase()}). The test found ${hits} squares that are hot at 95% or more.`
+            :`<b>Test complete!</b> Your guess landed in a ${gk===3?"not-significant":"cooler"} square. The real hot spots are the red squares: ${hits} of them. Counting and testing beats eyeballing.`); }); };
+      s0();
+    }});
+
+  /* ======================================================================
+     5. NETWORK — road trip (USA)
+     ====================================================================== */
+  DEMOS.push({id:"network",n:5,name:"Network",title:"Road trip",blurb:"find the shortest drive between two cities, then detour around a closed road.",
+    what:"Network analysis finds the best path along connected lines, like roads, so a route can only follow the network.",
+    tool:"Directions or Plan Routes (Map Viewer)",steps:["Start","Destination","Detour"],
+    basemap:"gray-vector",center:[-96,38.5],zoom:4,
+    start(x){
+      const C={SEA:[-122.33,47.61,"Seattle"],POR:[-122.68,45.52,"Portland"],SFO:[-122.42,37.77,"San Francisco"],LAX:[-118.24,34.05,"Los Angeles"],SAN:[-117.16,32.72,"San Diego"],LAS:[-115.14,36.17,"Las Vegas"],
+        PHX:[-112.07,33.45,"Phoenix"],SLC:[-111.89,40.76,"Salt Lake City"],BOI:[-116.20,43.62,"Boise"],BIL:[-108.50,45.78,"Billings"],DEN:[-104.99,39.74,"Denver"],ABQ:[-106.65,35.08,"Albuquerque"],
+        ELP:[-106.49,31.76,"El Paso"],DAL:[-96.80,32.78,"Dallas"],HOU:[-95.37,29.76,"Houston"],OKC:[-97.52,35.47,"Oklahoma City"],MKC:[-94.58,39.10,"Kansas City"],OMA:[-95.93,41.26,"Omaha"],
+        MSP:[-93.27,44.98,"Minneapolis"],CHI:[-87.63,41.88,"Chicago"],STL:[-90.20,38.63,"St. Louis"],MEM:[-90.05,35.15,"Memphis"],BNA:[-86.78,36.16,"Nashville"],ATL:[-84.39,33.75,"Atlanta"],
+        MSY:[-90.07,29.95,"New Orleans"],MCO:[-81.38,28.54,"Orlando"],CLT:[-80.84,35.23,"Charlotte"],DCA:[-77.04,38.91,"Washington, DC"],NYC:[-74.01,40.71,"New York"],BOS:[-71.06,42.36,"Boston"],
+        CLE:[-81.69,41.50,"Cleveland"],IND:[-86.16,39.77,"Indianapolis"]};
+      const EL="SEA-POR POR-SFO SFO-LAX LAX-SAN LAX-LAS LAX-PHX SAN-PHX LAS-SLC SEA-BOI POR-BOI BOI-SLC SFO-SLC SLC-DEN SEA-BIL BIL-MSP BIL-DEN DEN-OMA DEN-MKC DEN-ABQ PHX-ABQ PHX-ELP ABQ-OKC ABQ-ELP ELP-DAL ELP-HOU DAL-HOU DAL-OKC OKC-MKC OKC-MEM DAL-MEM HOU-MSY MKC-OMA OMA-MSP OMA-CHI MKC-STL MSP-CHI CHI-IND STL-IND STL-MEM CHI-STL MEM-BNA MEM-MSY BNA-ATL IND-BNA MSY-ATL MSY-MCO ATL-MCO ATL-CLT BNA-CLT CLT-DCA MCO-CLT IND-CLE CHI-CLE CLE-NYC DCA-NYC NYC-BOS CLE-DCA".split(" ");
+      const N={}; for(const k in C) N[k]={id:k,lon:C[k][0],lat:C[k][1],name:C[k][2],adj:[]};
+      const E=EL.map(s=>{ const [a,b]=s.split("-"), e={a,b,mi:Math.round(mi(N[a],N[b])*1.18/5)*5}; N[a].adj.push(e); N[b].adj.push(e); return e; });
+      const baseL=x.layer(), exL=x.layer(), rtL=x.layer(), cityL=x.layer(), markL=x.layer();
+      E.forEach(e=>{ e.line=LINE([[N[e.a].lon,N[e.a].lat],[N[e.b].lon,N[e.b].lat]]); baseL.add(G(e.line,SYM.line([90,110,120,.55],1.5))); });
+      const nodes=Object.values(N);
+      nodes.forEach(n=>{ cityL.add(pop(G(P(n.lon,n.lat),SYM.pt([11,59,71,1],8,[255,255,255,1],1.5)),n.name,"A city on the highway network.")); cityL.add(G(P(n.lon,n.lat),SYM.txt(n.name,[16,38,44,1],9,7))); });
+      x.legend([["#0b3b47","City"],["rgba(90,110,120,.7)","Highway (simplified)","ln"],["#f2b53a","Roads the search checked","ln"],["#ff5a4e","Shortest route","ln"]]);
+      const closed=new Set(); let A=null, Z=null, first=null, cur=null;
+      const dijkstra=(s,t)=>{ const dist={},prev={},seen=new Set(),order=[]; for(const k in N) dist[k]=Infinity; dist[s]=0;
+        for(;;){ let u=null,b=Infinity; for(const k in N) if(!seen.has(k)&&dist[k]<b){ b=dist[k]; u=k; } if(u===null) break; seen.add(u); order.push(u); if(u===t) break;
+          for(const e of N[u].adj){ if(closed.has(e)) continue; const v=e.a===u?e.b:e.a, nd=dist[u]+e.mi; if(nd<dist[v]){ dist[v]=nd; prev[v]={u,e}; } } }
+        if(dist[t]===Infinity) return null;
+        const path=[], via=[t]; let v=t; while(v!==s){ path.unshift(prev[v].e); v=prev[v].u; via.unshift(v); }
+        return {order:order.filter(k=>prev[k]).map(k=>prev[k].e),path,via,miles:dist[t]}; };
+      const show=async(res,ms)=>{ exL.removeAll(); rtL.removeAll(); x.sfx.whoosh(ms/1000); let k0=0;
+        await x.anim(ms,k=>{ const k1=Math.floor(k*res.order.length); for(let q=k0;q<k1;q++) exL.add(G(res.order[q].line,SYM.line([242,181,58,.9],2.5))); if(k1>k0) x.sfx.tick(); k0=k1; },"explore");
+        k0=0; await x.anim(260*res.path.length,k=>{ const k1=Math.ceil(k*res.path.length); for(let q=k0;q<k1;q++) rtL.add(G(res.path[q].line,SYM.line([255,90,78,1],5))); if(k1>k0) x.sfx.pop(); k0=k1; },"route");
+        x.sfx.ding(); };
+      const pickCity=p=>x.nearest(nodes,p,30);
+      const mark=(n,col)=>{ markL.add(pop(G(P(n.lon,n.lat),SYM.star(col,18)),n.name,n===A?"Your home city: where the trip starts.":"Your destination: where the trip ends.")); markL.add(G(P(n.lon,n.lat),SYM.txt(n.name,[16,38,44,1],11,12,true))); };
+      const s0=()=>{ x.step(0,`<h2>Pick your home city</h2><p>Road trip! The lines are a simplified highway network between ${nodes.length} cities. <b>Click a city dot</b> to start.</p>`); x.hint("Click your home city");
+        x.click(p=>{ const n=pickCity(p); if(!n) return; A=n; mark(n,[19,128,79,1]); x.sfx.pop(); s1(); }); };
+      const s1=()=>{ x.step(1,`<h2>Pick a destination</h2><p>Starting from <b>${A.name}</b>. Now <b>click your dream destination</b>, like a beach, a theme park city, or a concert.</p>`); x.hint("Click your destination");
+        x.click(async p=>{ const n=pickCity(p); if(!n||n===A) return; Z=n; x.click(null); x.hint(null); mark(n,[255,90,78,1]); x.sfx.pop();
+          first=dijkstra(A.id,Z.id); cur=first; await show(first,1600);
+          x.step(1,`<h2>Shortest route found</h2><div class="stat"><b>${first.miles.toLocaleString()}</b><span>miles · about ${fmt1(first.miles/65)} hours of driving</span></div>
+            <p>The search checked the closest roads first (yellow), spreading out until it reached ${Z.name}.</p><p class="muted">Route: ${first.via.map(k=>N[k].name).join(" → ")}</p>
+            <div class="row"><button class="btn" id="next">Next →</button></div>`);
+          x.on("#next",s2); }); };
+      const s2=()=>{ x.step(2,`<h2>Detour!</h2><p>A storm closed a highway. <b>Click any road on your red route</b> to close it, and the network will find a detour.</p><div id="fb"></div>`); x.hint("Click a road on your route to close it");
+        x.click(async p=>{ if(L.finished) return; let best=null, bd=26;
+          for(const e of cur.path){ const s1p=x.screen(N[e.a].lon,N[e.a].lat), s2p=x.screen(N[e.b].lon,N[e.b].lat); if(!s1p||!s2p) continue;
+            const vx=s2p.x-s1p.x, vy=s2p.y-s1p.y, t=clamp(((p.sx-s1p.x)*vx+(p.sy-s1p.y)*vy)/(vx*vx+vy*vy),0,1), dd=Math.hypot(s1p.x+t*vx-p.sx,s1p.y+t*vy-p.sy); if(dd<bd){ bd=dd; best=e; } }
+          if(p.hit){ const hs=view.toScreen(p.hit.geometry); if(!best||(hs&&Math.hypot(hs.x-p.sx,hs.y-p.sy)<=Math.max(bd,5))) return; x.unpop(); }
+          if(!best){ x.sfx.miss(); return; }
+          closed.add(best); x.sfx.thud();
+          baseL.add(G(best.line,SYM.line([200,30,30,1],4,"dash")));
+          const mid=[(N[best.a].lon+N[best.b].lon)/2,(N[best.a].lat+N[best.b].lat)/2]; markL.add(pop(G(P(...mid),SYM.pt([200,30,30,1],16,[255,255,255,1],2,"x")),"Closed road","A storm closed this highway."));
+          const res=dijkstra(A.id,Z.id);
+          if(!res){ closed.delete(best); x.sfx.miss(); x.q("#fb").innerHTML=`<p class="note">No way around! In this network, ${N[best.a].name} to ${N[best.b].name} is the only road in. Close a different road.</p>`; return; }
+          x.click(null); x.hint(null); cur=res; await show(res,900);
+          x.done(`<b>Detour found!</b> The new route is ${res.miles.toLocaleString()} miles, <b>${(res.miles-first.miles).toLocaleString()} miles longer</b>. Route: ${res.via.map(k=>N[k].name).join(" → ")}. Delivery apps and GPS run this kind of search millions of times a day.`); }); };
+      s0();
+    }});
+
+  /* ======================================================================
+     6. QUERY — pizza finder (Chicago)
+     ====================================================================== */
+  DEMOS.push({id:"query",n:6,name:"Query & select",title:"Pizza finder",blurb:"ask the map for cheap, tasty pizza near your house.",
+    what:"A query asks the data a question, by attributes (like price) or by location (like distance), and selects only what matches.",
+    tool:"Find by Attributes and Location (Map Viewer → Analysis)",steps:["Ask by attribute","Ask by location","Order up"],
+    basemap:"gray-vector",center:[-87.672,41.905],zoom:13,
+    start(x){
+      const r=rng(314), A=["Slice","Crust","Dough","Pie","Cheesy","Saucy","Pepperoni","Mozz","Oven","Garlic"], Bn=["Station","Shack","Lab","Spot","Corner","Express","Palace","Garage","Hub","Works"];
+      const PZ=Array.from({length:45},(_,i)=>({lon:-87.71+r()*.075,lat:41.88+r()*.05,price:2+Math.floor(r()*9)*.5,rating:Math.round((2.6+r()*2.4)*10)/10,name:`${A[i%10]} ${Bn[(i*3+Math.floor(i/10))%10]}`}));
+      const ringL=x.layer(), pzL=x.layer(), selL=x.layer(), homeL=x.layer(), deliL=x.layer();
+      const BASE=SYM.pt([240,140,40,1],10,[120,60,20,1],1.5), FADE=SYM.pt([150,150,150,.35],6,[255,255,255,.5],.5);
+      PZ.forEach(p=>{ p.g=pop(G(P(p.lon,p.lat),BASE),p.name,`Pizza place · slice $${p.price.toFixed(2)} · rated ${p.rating.toFixed(1)} stars`); p.g.pz=p; pzL.add(p.g); });
+      x.legend([["#f08c28","Pizza place"],["#ff5a4e","Your house"]]);
+      let maxP=3.5, minR=4, match=[], house=null, sel=[];
+      const sql=()=>`price <= ${maxP===99?"any":maxP.toFixed(2)}${minR?` AND rating >= ${minR.toFixed(1)}`:""}`;
+      const s0=()=>{ x.step(0,`<h2>Ask by attribute</h2><p>Every pizza place has data: a slice price and a rating. Build a question for the data:</p>
+          <div class="fields"><label>Max slice price<select id="qp">${[2.5,3,3.5,4,5,99].map(v=>`<option value="${v}" ${v===maxP?"selected":""}>${v===99?"Any price":"$"+v.toFixed(2)}</option>`).join("")}</select></label>
+          <label>Min rating<select id="qr">${[0,3.5,4,4.5].map(v=>`<option value="${v}" ${v===minR?"selected":""}>${v?v.toFixed(1)+" stars":"Any rating"}</option>`).join("")}</select></label></div>
+          <div class="sql" id="sql"></div><div class="row"><button class="btn" id="run">Run query</button><button class="btn ghost" id="next" disabled>Next →</button></div><div id="fb"></div>`);
+        const upd=()=>{ x.q("#sql").textContent=sql(); }; upd();
+        x.q("#qp").onchange=e=>{ maxP=+e.target.value; upd(); x.sfx.click(); }; x.q("#qr").onchange=e=>{ minR=+e.target.value; upd(); x.sfx.click(); };
+        x.on("#run",async()=>{ match=PZ.filter(p=>p.price<=maxP&&p.rating>=minR); x.sfx.whoosh(.5);
+          await x.anim(650,k=>{ const s=k<.5?10+12*k:16-10*(k-.5); PZ.forEach(p=>{ p.g.symbol=match.includes(p)?SYM.pt([240,140,40,1],s,[120,60,20,1],1.5):SYM.pt([200-50*k,140+10*k,40+110*k,1-.65*k],10-4*k,[255,255,255,.6],.75); }); },"q");
+          if(match.length){ x.sfx.ding(); x.q("#fb").innerHTML=`<p class="note win"><b>${match.length} of ${PZ.length}</b> places match your query.</p>`; x.q("#next").disabled=false; }
+          else { x.sfx.miss(); x.q("#fb").innerHTML=`<p class="note">No matches. Loosen your question and run it again.</p>`; x.q("#next").disabled=true; } });
+        x.on("#next",s1); };
+      const pickHouse=async p=>{ house=p; homeL.removeAll(); ringL.removeAll(); selL.removeAll(); homeL.add(pop(G(P(p.lon,p.lat),SYM.star([255,90,78,1],26)),"Your house","Pizza gets delivered here.")); x.sfx.pop();
+        const rg=G(null,SYM.fill([255,90,78,.08],[255,90,78,.9],2,"dash")); ringL.add(rg);
+        await x.anim(600,k=>{ rg.geometry=circle(p.lon,p.lat,Math.max(.01,ease(k))); },"ring");
+        sel=match.map(m=>({m,d:mi(p,m)})).filter(o=>o.d<=1).sort((a,b)=>a.d-b.d);
+        sel.forEach(o=>selL.add(G(P(o.m.lon,o.m.lat),SYM.pt([0,0,0,0],22,[19,128,79,1],3))));
+        if(sel.length) x.sfx.ding(); else x.sfx.miss(); s2(); };
+      const s1=()=>{ x.step(1,`<h2>Ask by location</h2><p>Your query: <code>${sql()}</code>. Now add a location rule: <b>within 1 mile of my house</b>. <b>Click the map</b> where you live.</p>`); x.hint("Click your house");
+        x.click(p=>{ x.hint(null); pickHouse(p); }); };
+      const order=async o=>{ x.click(null); const m=o.m, dot=pop(G(P(m.lon,m.lat),SYM.pt([19,128,79,1],14,[255,255,255,1],2)),"Delivery driver","Bringing your pizza."); deliL.add(dot); x.sfx.slide(1);
+        await x.anim(1300,k=>{ const e=ease(k); dot.geometry=P(m.lon+(house.lon-m.lon)*e,m.lat+(house.lat-m.lat)*e); },"deli");
+        x.sfx.bell(); x.burst("Pizza's here!");
+        x.done(`<b>Order delivered!</b> ${m.name}: $${m.price.toFixed(2)} slice, ${m.rating.toFixed(1)} stars, ${fmt1(o.d)} mi away. You combined an attribute query with a location query, just like map apps do when you search "pizza near me".`); };
+      const s2=()=>{ if(!sel.length){ x.step(1,`<h2>Ask by location</h2><p class="note">No pizza within 1 mile matches <code>${sql()}</code>. Click somewhere else on the map, or loosen your query.</p><div class="row"><button class="btn ghost" id="back">← Change my query</button></div>`);
+          x.on("#back",()=>{ x.click(null); s0(); }); return; }
+        x.step(2,`<h2>Order up</h2><p><b>${sel.length}</b> place${sel.length===1?"":"s"} match <code>${sql()}</code> <b>AND</b> are within 1 mile. Pick one to order (or click it on the map):</p>
+          ${sel.slice(0,6).map((o,i)=>`<button class="opt" data-i="${i}"><b>${o.m.name}</b><br><span class="muted">$${o.m.price.toFixed(2)} · ${o.m.rating.toFixed(1)} stars · ${fmt1(o.d)} mi</span></button>`).join("")}
+          <p class="muted">Click elsewhere on the map to move your house.</p>`);
+        $("card").querySelectorAll(".opt").forEach(b=>b.onclick=()=>order(sel[+b.dataset.i]));
+        x.click(p=>{ if(p.hit){ const o=p.hit.pz&&sel.find(q=>q.m===p.hit.pz); if(o) order(o); return; }
+          const hit=x.nearest(sel.map(o=>({lon:o.m.lon,lat:o.m.lat,o})),p,22); if(hit) order(hit.o); else pickHouse(p); }); };
+      s0();
+    }});
+
+  /* ======================================================================
+     7. SPATIAL AUTOCORRELATION — Halloween candy (Naperville, IL)
+     ====================================================================== */
+  DEMOS.push({id:"autocorrelation",n:7,name:"Spatial autocorrelation",title:"Halloween candy map",blurb:"are the full-size-candy-bar spots clustered together?",
+    what:"Spatial autocorrelation measures whether similar values sit near each other (clustered), are mixed (random), or alternate (spread out).",
+    tool:"Spatial Autocorrelation (Global Moran's I) in ArcGIS Pro",steps:["Predict","Shuffle","Verdict"],
+    basemap:"gray-vector",center:[-88.1500,41.7728],zoom:16,
+    async start(x){
+      const r=rng(1031), gs=gaussOf(r), B={w:-88.1555,e:-88.1445,s:41.7690,n:41.7765};
+      const field=(lon,lat)=>{ const u=(lon-B.w)/(B.e-B.w), v=(lat-B.s)/(B.n-B.s);
+        return clamp(Math.round(1+4*(Math.exp(-((u-.25)**2+(v-.72)**2)/.05)+.8*Math.exp(-((u-.8)**2+(v-.25)**2)/.04)+.22*gs())),1,5); };
+      setCard(`<h2>Loading the neighborhood…</h2><p class="muted">Getting real house locations from ArcGIS Online (FEMA USA Structures).</p>`); rail(this.steps,0);
+      let H=[], real=false;
+      try{
+        const res=await Promise.race([esriRequest(STRUCTURES,{responseType:"json",query:{where:"OCC_CLS='Residential'",geometry:`${B.w},${B.s},${B.e},${B.n}`,geometryType:"esriGeometryEnvelope",inSR:"4326",
+          spatialRel:"esriSpatialRelIntersects",outFields:"OBJECTID",returnGeometry:"true",outSR:"102100",resultRecordCount:"1000",f:"json"}}),new Promise((_,no)=>setTimeout(()=>no(new Error("timeout")),10000))]);
+        const [cx,cy]=toWM((B.w+B.e)/2,(B.s+B.n)/2);
+        const feats=((res.data&&res.data.features)||[]).filter(f=>f.geometry&&f.geometry.rings&&f.geometry.rings.length).map(f=>{ const poly=new Polygon({rings:f.geometry.rings,spatialReference:SR}), c=poly.centroid||poly.extent.center; return {poly,x:c.x,y:c.y}; });
+        if(feats.length<60) throw new Error("too few houses");
+        feats.sort((a,b)=>Math.hypot(a.x-cx,a.y-cy)-Math.hypot(b.x-cx,b.y-cy));
+        H=feats.slice(0,150).map(f=>{ const ll=fromWM(f.x,f.y); return {...f,lon:ll.lon,lat:ll.lat}; }); real=true;
+      }catch(e){
+        const NX=14, NY=10;
+        for(let j=0;j<NY;j++) for(let i=0;i<NX;i++){ const lon=-88.158+i*.0012, lat=41.768+j*.0009, [X,Y]=toWM(lon,lat); H.push({lon,lat,x:X,y:Y}); }
+      }
+      if(!x.alive()) return;
+      H.forEach(h=>{ h.v=field(h.lon,h.lat); });
+      /* neighbors: the 6 nearest candy drop locations */
+      const NB=H.map(h=>H.map((o,j)=>({j,d:Math.hypot(o.x-h.x,o.y-h.y)})).filter(o=>o.d>0).sort((a,b)=>a.d-b.d).slice(0,6).map(o=>o.j));
+      const moran=vals=>{ const n=vals.length, m=vals.reduce((a,b)=>a+b,0)/n, dv=vals.map(v=>v-m); let num=0,W=0; NB.forEach((nb,i)=>nb.forEach(j=>{ num+=dv[i]*dv[j]; W++; })); return (n/W)*num/dv.reduce((s,v)=>s+v*v,0); };
+      const REAL=H.map(h=>h.v), realI=moran(REAL);
+      const CAN=[["#4b2a7b","Raisins"],["#8a5fb5","Toothbrush"],["#c7b8d8","Lollipop"],["#f6a04d","Fun-size bar"],["#ff6a00","Full-size bar"]];
+      const GIFT=["raisins","toothbrushes","lollipops","fun-size candy bars","full-size candy bars"];
+      const MS=real?11:13, footL=x.layer(), L1=x.layer();
+      if(real) footL.addMany(H.map(h=>G(h.poly,SYM.fill([16,38,44,.1],[16,38,44,.45],.75))));
+      H.forEach(h=>{ h.cur=h.v; h.g=pop(G(PX(h.x,h.y),SYM.pt(CAN[h.v-1][0],MS,[255,255,255,1],1.5)),()=>({t:"Candy drop location",d:`This spot gives away ${GIFT[h.cur-1]} on Halloween.`})); L1.add(h.g); });
+      if(real){ view.goTo(H.map(h=>h.g.geometry),{duration:reduce?0:900}).catch(()=>{}); }
+      else { view.constraints.maxZoom=15; view.goTo({target:P(-88.1502,41.7720),zoom:15},{duration:reduce?0:600}).catch(()=>{}); }
+      x.legend([...CAN.map(([c,t])=>[c,t]),...(real?[["rgba(16,38,44,.25)","House footprint (FEMA)","sq"]]:[])]);
+      const paint=vals=>H.forEach((h,i)=>{ h.cur=vals[i]; h.g.symbol=SYM.pt(CAN[vals[i]-1][0],MS,[255,255,255,1],1.5); });
+      const shuffle=()=>{ const a=REAL.slice(); for(let i=a.length-1;i>0;i--){ const k=Math.floor(r()*(i+1)); [a[i],a[k]]=[a[k],a[i]]; } return a; };
+      const sims=[]; let pred=null;
+      const hist=real=>{ const svg=x.q("#hist"); if(!svg) return; const W=svg.clientWidth||300, Hh=130, lo=Math.min(-.35,...sims), hi=Math.max(.35,realI+.08,...sims), nb=22, bins=Array(nb).fill(0);
+        sims.forEach(s=>bins[Math.min(nb-1,Math.floor((s-lo)/(hi-lo)*nb))]++); const mx=Math.max(1,...bins), bw=W/nb, X=v=>(v-lo)/(hi-lo)*W;
+        svg.innerHTML=bins.map((b,i)=>`<rect x="${i*bw+1}" y="${Hh-22-b/mx*(Hh-40)}" width="${bw-2}" height="${b/mx*(Hh-40)}" rx="2" fill="#8a5fb5"/>`).join("")
+          +`<line x1="${X(0)}" x2="${X(0)}" y1="12" y2="${Hh-22}" stroke="#4f6b73" stroke-dasharray="3 3"/><text x="${X(0)}" y="${Hh-6}" font-size="11" text-anchor="middle" fill="#4f6b73">0 = random</text>`
+          +(real!=null?`<line x1="${X(real)}" x2="${X(real)}" y1="4" y2="${Hh-22}" stroke="#ff6a00" stroke-width="4"/><text x="${Math.min(W-4,X(real))}" y="12" font-size="11" font-weight="700" text-anchor="end" fill="#c2362c">real map</text>`:""); };
+      const s0=()=>{ x.step(0,`<h2>Predict</h2><p>Trick-or-treat survey! Each dot is a <b>candy drop location</b>${real?" on a real house":""}, colored by the candy it gave out (the candy is sample data). Are the great-candy spots…</p>${real?"":`<p class="muted">Practice neighborhood: real house locations couldn't load.</p>`}
+          ${[["clustered","Clustered together"],["random","Mixed up randomly"],["spread","Spread out evenly, like a checkerboard"]].map(([k,t])=>`<button class="opt" data-k="${k}">${t}</button>`).join("")}`);
+        $("card").querySelectorAll(".opt").forEach(b=>b.onclick=()=>{ pred=b.dataset.k; x.sfx.pop(); s1(); }); };
+      const s1=()=>{ x.step(1,`<h2>Shuffle test</h2><p>If candy were handed out <b>randomly</b>, what would the map look like? Shuffle the candy between the candy drop locations and measure clustering each time with <b>Moran's I</b>.</p>
+          <div class="row"><button class="btn ghost" id="one">Shuffle once</button><button class="btn" id="many">Shuffle 99 times</button></div>
+          <svg class="hist" id="hist" role="img" aria-label="Histogram of Moran's I from shuffled maps"></svg><p class="muted" id="cnt">0 shuffles so far</p>
+          <div class="row"><button class="btn" id="next" disabled>Next →</button></div>`);
+        const after=()=>{ hist(null); x.q("#cnt").textContent=`${sims.length} shuffles so far. Random maps land near 0.`; if(sims.length>=20) x.q("#next").disabled=false; };
+        x.on("#one",async()=>{ const v=shuffle(); let k0=0; const idx=H.map((h,i)=>i).sort(()=>r()-.5);
+          await x.anim(500,k=>{ const k1=Math.floor(k*idx.length); for(let q=k0;q<k1;q++){ const i=idx[q]; H[i].cur=v[i]; H[i].g.symbol=SYM.pt(CAN[v[i]-1][0],MS,[255,255,255,1],1.5); } if(k1>k0) x.sfx.tick(); k0=k1; },"sh");
+          sims.push(moran(v)); after(); });
+        x.on("#many",async()=>{ x.q("#many").disabled=true; x.q("#one").disabled=true; const batch=Array.from({length:99},()=>{ const v=shuffle(); return {v,I:moran(v)}; }); let k0=0;
+          await x.anim(1600,k=>{ const k1=Math.floor(k*99); for(let q=k0;q<k1;q++){ sims.push(batch[q].I); } if(k1>k0){ paint(batch[k1-1].v); x.sfx.tick(); hist(null); } k0=k1; },"many");
+          x.q("#one").disabled=false; x.q("#many").disabled=false; after(); });
+        x.on("#next",s2); hist(null); };
+      const s2=()=>{ x.step(2,`<h2>Verdict</h2><p>Now measure the <b>real</b> map and compare it with all ${sims.length} random shuffles.</p>
+          <svg class="hist" id="hist" role="img" aria-label="Histogram with the real map marked"></svg><div class="row"><button class="btn" id="run">Measure the real map</button></div><div id="out"></div>`);
+        hist(null);
+        x.on("#run",async()=>{ x.q("#run").disabled=true; paint(REAL); x.sfx.whoosh(.6); await x.wait(400); hist(realI); x.sfx.thud();
+          const beat=sims.filter(s=>s>=realI).length, p=(beat+1)/(sims.length+1), verdict=realI>.1&&p<.05?"clustered":realI<-.1&&p>.95?"spread":"random";
+          x.q("#out").innerHTML=`<div class="stat"><b>${realI.toFixed(2)}</b><span>Moran's I for the real map</span></div><p>${beat===0?`Higher than every one of the ${sims.length} random shuffles.`:`Only ${beat} of ${sims.length} shuffles scored this high.`} The candy is <b>${verdict==="clustered"?"clustered":verdict}</b>.</p>`;
+          x.done(`${pred===verdict?"<b>Your prediction was right!</b>":"<b>Surprise!</b> You predicted "+(pred==="spread"?"spread out":pred)+"."} Great-candy spots really do cluster: neighbors copy neighbors. Scientists use Moran's I to check if things like disease, income, or air pollution cluster.`); }); };
+      s0();
+    }});
+
+  /* ======================================================================
+     8. DENSITY — firefly night (Elkmont, Great Smoky Mountains)
+     ====================================================================== */
+  DEMOS.push({id:"density",n:8,name:"Density",title:"Firefly night",blurb:"turn hundreds of firefly sightings into a glowing density map.",
+    what:"Density analysis turns crowded points into a smooth surface that shows how many things are found in each area.",
+    tool:"Calculate Density (Map Viewer → Analysis)",steps:["Survey","Glow","Photo spot"],
+    basemap:"dark-gray-vector",center:[-83.581,35.655],zoom:11,
+    start(x){
+      const r=rng(4242), gs=gaussOf(r), path=[[-83.592,35.648],[-83.586,35.652],[-83.580,35.651],[-83.575,35.656],[-83.570,35.662]], F=[];
+      for(let i=0;i<190;i++){ const s=Math.floor(r()*4), t=r(), a=path[s], b=path[s+1]; F.push({lon:a[0]+(b[0]-a[0])*t+gs()*.0011,lat:a[1]+(b[1]-a[1])*t+gs()*.0009}); }
+      for(let i=0;i<45;i++) F.push({lon:-83.5840+gs()*.0007,lat:35.6515+gs()*.0006});
+      for(let i=0;i<30;i++) F.push({lon:-83.5735+gs()*.0008,lat:35.6580+gs()*.0007});
+      for(let i=0;i<40;i++) F.push({lon:-83.594+r()*.026,lat:35.646+r()*.018});
+      F.forEach(f=>{ [f.x,f.y]=toWM(f.lon,f.lat); });
+      const grid=makeGrid({w:-83.594,e:-83.568,s:35.646,n:35.664},44,32), cells=grid.cells, cosl=Math.cos(35.655*RAD);
+      const STOPS=[[20,60,30,0],[30,110,50,.35],[130,210,60,.6],[235,255,110,.82],[255,255,235,.92]];
+      const cellL=x.layer(), ffL=x.layer(), camL=x.layer();
+      const cg=cells.map(c=>G(POLY(c.ring),SYM.fill([0,0,0,0]))); cellL.addMany(cg);
+      let h=.1, max=1, glowed=false;
+      const dens=()=>{ const hm=h*1609.34, h2=hm*hm; max=0;
+        cells.forEach(c=>{ let s=0; for(const f of F){ const dx=(f.x-c.x)*cosl, dy=(f.y-c.y)*cosl, d2=dx*dx+dy*dy; if(d2<h2){ const u=1-d2/h2; s+=u*u; } } c.d=s*3/(Math.PI*h2); if(c.d>max) max=c.d; }); };
+      const paint=i=>{ cg[i].symbol=SYM.fill(ramp(STOPS,Math.sqrt(cells[i].d/max))); };
+      x.legend([["#f5ff8a","Firefly sighting"]]);
+      const s0=()=>{ x.step(0,`<h2>Night survey</h2><p>Elkmont in the Great Smoky Mountains is famous for fireflies that blink together. Volunteers log every firefly they see (sample data). Start the survey to fly in to the meadow.</p>
+          <div class="row"><button class="btn" id="go">Start the survey</button></div><div id="out"></div>`);
+        x.on("#go",async()=>{ x.q("#go").disabled=true; x.sfx.whoosh(1.4);
+          const [ax,ay]=toWM(-83.594,35.646), [bx,by]=toWM(-83.568,35.664);
+          await x.goTo(POLY([[ax,ay],[ax,by],[bx,by],[bx,ay],[ax,ay]]).extent.clone().expand(1.08),1800);
+          const idx=F.map((f,i)=>i).sort(()=>r()-.5); let k0=0;
+          await x.anim(2200,k=>{ const k1=Math.floor(k*idx.length); for(let q=k0;q<k1;q++){ const f=F[idx[q]]; ffL.add(pop(G(P(f.lon,f.lat),SYM.pt([245,255,138,.9],5,[255,255,200,.4],2)),"Firefly sighting","A volunteer saw a firefly blink here.")); } if(k1>k0) x.sfx.chime(); k0=k1; },"ff");
+          x.q("#out").innerHTML=`<p class="note">${F.length} fireflies logged. The dots pile up on each other, so it's hard to tell where the <i>most</i> fireflies are.</p><div class="row"><button class="btn" id="next">Next →</button></div>`;
+          x.on("#next",s1); }); };
+      const s1=()=>{ x.step(1,`<h2>Make it glow</h2><p>Kernel density spreads each firefly into a soft glow, then adds up all the glows. The <b>search radius</b> sets how far each glow spreads.</p>
+          <label class="sl" for="h">Search radius: <span class="big" id="hOut"></span></label><input type="range" id="h" min="0.05" max="0.3" step="0.05" value="${h}">
+          <div class="row"><button class="btn" id="run">Make it glow</button><button class="btn ghost" id="next" disabled>Next →</button></div><p class="muted" id="tip"></p>`);
+        const out=()=>{ x.q("#hOut").textContent=`${h.toFixed(2)} mi (${Math.round(h*1609)} m)`; }; out();
+        x.q("#h").oninput=e=>{ h=+e.target.value; out(); x.sfx.click(); if(glowed){ dens(); cells.forEach((c,i)=>paint(i)); x.q("#tip").textContent=h<.1?"Small radius: lots of tiny bright spots.":h>.2?"Big radius: smooth, blurry glow.":"Medium radius: clear hot areas."; } };
+        x.on("#run",async()=>{ x.q("#run").disabled=true; dens(); x.sfx.whoosh(1.1); x.anim(800,k=>{ ffL.opacity=1-.75*k; },"ffo");
+          const order=cells.map((c,i)=>i).sort((a,b)=>cells[a].i-cells[b].i); let k0=0;
+          await x.anim(1300,k=>{ const k1=Math.floor(k*order.length); for(let q=k0;q<k1;q++) paint(order[q]); if(k1>k0) x.sfx.chime(); k0=k1; },"glow");
+          glowed=true; x.q("#next").disabled=false; x.q("#tip").textContent="Now drag the slider to change the radius.";
+          x.legend([[css(ramp(STOPS,.3)),"Few fireflies","sq"],[css(ramp(STOPS,.65)),"More","sq"],[css(ramp(STOPS,1)),"Brightest","sq"]]); });
+        x.on("#next",s2); };
+      const s2=()=>{ x.step(2,`<h2>Find the photo spot</h2><p>You get one long-exposure photo tonight. <b>Click the brightest spot</b> on the density map to set up your camera.</p><div id="fb"></div>`); x.hint("Click the brightest spot");
+        x.click(p=>{ if(L.finished) return; const c=grid.at(p.x,p.y); const v=c?c.d/max:0;
+          if(v>=.8){ camL.removeAll(); camL.add(pop(G(P(p.lon,p.lat),SYM.star([255,255,255,1],24)),"Camera spot","Your long-exposure firefly camera.")); x.flash(); x.sfx.shutter(); x.q("#fb").innerHTML="";
+            x.done(`<b>Perfect shot!</b> Your camera spot is ${Math.round(v*100)}% as bright as the very best spot. Park rangers use density maps like this to plan trails, viewing areas, and crowd control.`); }
+          else { x.sfx.miss(); x.q("#fb").innerHTML=`<p class="note">This spot is only ${Math.round(v*100)}% as bright as the best one. Look for the whitest glow.</p>`; } }); };
+      s0();
+    }});
+
+  /* ======================================================================
+     9. TERRAIN — sledding hill (Afton Alps, MN; real elevation)
+     ====================================================================== */
+  DEMOS.push({id:"terrain",n:9,name:"Terrain",title:"Sledding hill",blurb:"use real elevation to find the perfect sledding slope.",
+    what:"Terrain analysis reads elevation (height) to work out slope, steepness, and which way water or a sled would flow downhill.",
+    tool:"Slope (raster function in Map Viewer, with ArcGIS Image)",steps:["Elevation","Slope","Ride"],
+    basemap:"topo-vector",center:[-92.786,44.857],zoom:15,
+    start(x){
+      const grid=makeGrid({w:-92.802,e:-92.770,s:44.8475,n:44.8665},40,34), cells=grid.cells;
+      const cellL=x.layer(), runL=x.layer(), sledL=x.layer();
+      const cg=cells.map(c=>G(POLY(c.ring),SYM.fill([0,0,0,0]))); cellL.addMany(cg);
+      const HY=[[60,140,95,.65],[165,200,110,.65],[220,195,130,.68],[165,115,80,.7],[245,245,245,.75]];
+      const SL=[[180,180,165,.55,"Too flat (under 5°)"],[40,110,220,.6,"Perfect (5° to 15°)"],[220,50,40,.62,"Too steep (over 15°)"]];
+      let real=false, zmin=0, zmax=1, loaded=false, sloped=false;
+      const synth=()=>cells.forEach(c=>{ const edge=-92.7765+.003*Math.sin(c.lat*900), t=(c.lon-edge)/.0022;
+        c.z=205+110/(1+Math.exp(t))+10*Math.sin(c.lat*2600)*Math.exp(-t*t/4)+6*Math.sin(c.lon*1700); });
+      const loadElev=async()=>{ try{ const el=new ElevationLayer({url:"https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer"});
+          const job=(async()=>{ await el.load(); return el.queryElevation(new Multipoint({points:cells.map(c=>[c.lon,c.lat]),spatialReference:{wkid:4326}}),{returnSampleInfo:false}); })();
+          const res=await Promise.race([job,new Promise((_,no)=>setTimeout(()=>no(new Error("timeout")),12000))]);
+          res.geometry.points.forEach((p,i)=>{ cells[i].z=p[2]; }); if(cells.some(c=>!isFinite(c.z))) throw new Error("bad data"); real=true; }
+        catch(e){ synth(); real=false; } };
+      const slopes=()=>cells.forEach(c=>{ const g=(di,dj)=>grid.get(c.i+di,c.j+dj)||c;
+        const e=g(1,0), w=g(-1,0), n=g(0,1), s=g(0,-1);
+        const dx=mi(w,e)*1609.34||1, dy=mi(s,n)*1609.34||1, gx=(e.z-w.z)/dx, gy=(n.z-s.z)/dy;
+        c.s=Math.atan(Math.hypot(gx,gy))/RAD; c.k=c.s<5?0:c.s<=15?1:2; });
+      const elevChip=p=>{ const c=grid.at(p.x,p.y); if(!c) return; x.sfx.click();
+        x.chip(`Elevation <b>${Math.round(c.z)} m</b> (${Math.round(c.z*3.281)} ft)${sloped?` · slope <b>${Math.round(c.s)}°</b>`:""}`); };
+      const s0=()=>{ x.step(0,`<h2>Read the elevation</h2><p>This is Afton Alps, a ski hill on the bluffs above the St. Croix River in Minnesota. Load <b>real elevation data</b> from ArcGIS to see how high each spot is.</p>
+          <div class="row"><button class="btn" id="run">Load real elevation</button></div><div id="out"></div>`);
+        x.on("#run",async()=>{ const b=x.q("#run"); b.disabled=true; b.textContent="Asking ArcGIS for heights…"; x.sfx.whoosh(.6);
+          await loadElev(); if(!x.alive()) return; zmin=Math.min(...cells.map(c=>c.z)); zmax=Math.max(...cells.map(c=>c.z)); loaded=true; b.textContent="Elevation loaded";
+          const order=cells.map((c,i)=>i).sort((a,b2)=>cells[a].z-cells[b2].z); let k0=0;
+          x.sfx.slide(1.6);
+          await x.anim(1600,k=>{ const k1=Math.floor(k*order.length); for(let q=k0;q<k1;q++){ const i=order[q]; cg[i].symbol=SYM.fill(ramp(HY,(cells[i].z-zmin)/(zmax-zmin))); } k0=k1; },"elev");
+          x.legend([[css(HY[0]),`Low (${Math.round(zmin)} m)`,"sq"],[css(HY[2]),"Middle","sq"],[css(HY[4]),`High (${Math.round(zmax)} m)`,"sq"]]);
+          const drop=zmax-zmin;
+          x.q("#out").innerHTML=`<p class="note">${real?"Real elevation from the ArcGIS World Elevation service.":"Practice terrain: real elevation couldn't load, so this is a made-up hill."} The colors filled in from lowest to highest. The hill rises <b>${Math.round(drop)} m</b> (${Math.round(drop*3.281)} ft), about ${Math.round(drop/3)} stories tall.</p>
+            <p class="muted">Click the map to read the elevation anywhere.</p><div class="row"><button class="btn" id="next">Next →</button></div>`;
+          x.click(elevChip); x.on("#next",s1); }); };
+      const s1=()=>{ x.step(1,`<h2>Calculate slope</h2><p>Slope compares each spot's height with its neighbors. Big height change over a short distance = steep.</p><div class="row"><button class="btn" id="run">Calculate slope</button></div><div id="out"></div>`);
+        x.on("#run",async()=>{ x.q("#run").disabled=true; slopes(); sloped=true; x.sfx.whoosh(1);
+          const order=cells.map((c,i)=>i).sort((a,b)=>cells[b].j-cells[a].j); let k0=0;
+          await x.anim(1300,k=>{ const k1=Math.floor(k*order.length); for(let q=k0;q<k1;q++){ const i=order[q]; cg[i].symbol=SYM.fill(SL[cells[i].k].slice(0,4)); } if(k1>k0) x.sfx.tick(); k0=k1; },"slope");
+          x.legend(SL.map(s=>[css(s),s[4],"sq"]));
+          const cnt=[0,1,2].map(k=>cells.filter(c=>c.k===k).length);
+          x.q("#out").innerHTML=`<div class="bars">${SL.map((s,k)=>`<div><span>${s[4].split(" (")[0]}</span><i style="background:${css(s)};width:${cnt[k]/cells.length*100}%"></i><b>${Math.round(cnt[k]/cells.length*100)}%</b></div>`).join("")}</div>
+            <div class="row"><button class="btn" id="next">Next →</button></div>`;
+          x.on("#next",s2); }); };
+      const s2=()=>{ x.step(2,`<h2>Ride!</h2><p><b>Click a blue (perfect) square</b> to start your sled. It will slide downhill the steepest way, square to square.</p><div id="fb"></div>`); x.hint("Click a blue square to start sledding");
+        x.click(async p=>{ if(L.finished) return; const c0=grid.at(p.x,p.y); if(!c0) return;
+          const path=[c0]; let c=c0; for(let s=0;s<80;s++){ let nx=null, bestDrop=0; for(let dj=-1;dj<=1;dj++) for(let di=-1;di<=1;di++){ const o=grid.get(c.i+di,c.j+dj); if(!o||o===c) continue; const dr=(c.z-o.z)/Math.hypot(di,dj); if(dr>bestDrop){ bestDrop=dr; nx=o; } } if(!nx) break; path.push(nx); c=nx; }
+          runL.removeAll(); sledL.removeAll();
+          if(c0.k!==1||path.length<4){ x.sfx.miss(); x.q("#fb").innerHTML=`<p class="note">${c0.k===2?"Wipeout! That square is too steep. Pick a blue one.":c0.k===0?"Your sled didn't budge. That square is too flat. Pick a blue one.":"That run is too short. Try a blue square higher up the hill."}</p>`; return; }
+          x.click(null); x.hint(null); x.q("#fb").innerHTML="";
+          const ln=G(null,SYM.line([255,90,78,1],4,"short-dash")), sled=pop(G(P(c0.lon,c0.lat),SYM.pt([255,255,255,1],14,[255,90,78,1],3)),"Your sled","Ready for the next run."); runL.add(ln); sledL.add(sled); x.sfx.slide(path.length*.09+.4);
+          await x.anim(path.length*90,k=>{ const f=k*(path.length-1), i=Math.floor(f), t=f-i, a=path[i], b=path[Math.min(i+1,path.length-1)];
+            const lon=a.lon+(b.lon-a.lon)*t, lat=a.lat+(b.lat-a.lat)*t; sled.geometry=P(lon,lat); ln.geometry=LINE([...path.slice(0,i+1).map(q=>[q.lon,q.lat]),[lon,lat]]); },"sled");
+          const end=path[path.length-1], drop=c0.z-end.z; let len=0; for(let i=1;i<path.length;i++) len+=mi(path[i-1],path[i])*1609.34;
+          x.burst("Wheee!");
+          x.done(`<b>What a run!</b> You dropped <b>${Math.round(drop)} m</b> (${Math.round(drop*3.281)} ft) over ${Math.round(len)} m of hill. The path your sled took is the same "flow direction" GIS uses to predict where rainwater runs.`); }); };
+      s0();
+    }});
+
+  /* ======================================================================
+     10. PROXIMITY — ice cream trucks (Phoenix)
+     ====================================================================== */
+  DEMOS.push({id:"proximity",n:10,name:"Proximity",title:"Ice cream truck turf",blurb:"measure distances, map each truck's territory, then park your own.",
+    what:"Proximity analysis measures distances to find what is nearest, and which areas are closest to which place.",
+    tool:"Find Nearest (Map Viewer → Analysis → Use proximity)",steps:["Nearest","Territories","Your truck"],
+    basemap:"gray-vector",center:[-112.07,33.49],zoom:13,
+    start(x){
+      const r=rng(9001), gs=gaussOf(r), H=[];
+      [[-112.095,33.505,40],[-112.045,33.475,35],[-112.062,33.497,25]].forEach(([lo,la,n])=>{ for(let i=0;i<n;i++) H.push({lon:lo+gs()*.006,lat:la+gs()*.005}); });
+      for(let i=0;i<50;i++) H.push({lon:-112.11+r()*.08,lat:33.465+r()*.05});
+      const T=[{lon:-112.09,lat:33.48,name:"Frosty",c:[232,74,138]},{lon:-112.05,lat:33.505,name:"Sprinkles",c:[31,163,163]},{lon:-112.10,lat:33.507,name:"Cone Zone",c:[240,138,36]},{lon:-112.04,lat:33.47,name:"Polar Pop",c:[122,92,214]}];
+      const ME={name:"Your truck",c:[255,200,20],me:true};
+      const grid=makeGrid({w:-112.115,e:-112.025,s:33.462,n:33.518},40,30), cells=grid.cells;
+      const cellL=x.layer(), lineL=x.layer(), homeL=x.layer(), truckL=x.layer();
+      const cg=cells.map(c=>G(POLY(c.ring),SYM.fill([0,0,0,0]))); cellL.addMany(cg);
+      H.forEach(h=>{ h.g=pop(G(P(h.lon,h.lat),SYM.pt([16,38,44,.6],7,[255,255,255,.8],.75)),"Kid's house","A kid who loves ice cream lives here."); homeL.add(h.g); });
+      const drawTrucks=list=>{ truckL.removeAll(); list.forEach(t=>{ truckL.add(pop(G(P(t.lon,t.lat),t.me?SYM.star(t.c,28):SYM.pt(t.c,17,[255,255,255,1],3,"square")),t.name,t.me?"Your own ice cream truck.":"An ice cream truck that sells in this neighborhood.")); truckL.add(G(P(t.lon,t.lat),SYM.txt(t.name,[16,38,44,1],10,13,true))); }); };
+      drawTrucks(T);
+      x.legend([...T.map(t=>[css(t.c),t.name,"sq"]),["rgba(16,38,44,.6)","Kid's house"]]);
+      const nearest=(p,list)=>{ let b=null,bd=1e9; list.forEach(t=>{ const d=mi(p,t); if(d<bd){ bd=d; b=t; } }); return {t:b,d:bd}; };
+      const owners=list=>H.map(h=>nearest(h,list).t);
+      let best=0; for(let lo=-112.11;lo<=-112.03;lo+=.004) for(let la=33.465;la<=33.515;la+=.004){ const me={lon:lo,lat:la}; const n=H.filter(h=>nearest(h,[...T,me]).t===me).length; if(n>best) best=n; }
+      const GOAL=Math.round(best*.7);
+      const wave=async(list,ms)=>{ cells.forEach(c=>{ const n=nearest(c,list); c.t=n.t; c.d=n.d; }); H.forEach(h=>{ const n=nearest(h,list); h.t=n.t; h.d=n.d; });
+        const items=[...cells.map((c,i)=>({d:c.d,f:()=>{ cg[i].symbol=SYM.fill([...c.t.c,.22]); }})),...H.map(h=>({d:h.d,f:()=>{ h.g.symbol=SYM.pt([...h.t.c,1],8,[255,255,255,1],1); }}))].sort((a,b)=>a.d-b.d);
+        let k0=0; x.sfx.whoosh(ms/1000);
+        await x.anim(ms,k=>{ const k1=Math.floor(k*items.length); for(let q=k0;q<k1;q++) items[q].f(); if(k1>k0) x.sfx.tick(); k0=k1; },"wave"); };
+      const bars=list=>{ const own=owners(list); return `<div class="bars">${list.map(t=>{ const n=own.filter(o=>o===t).length; return `<div><span>${t.name}</span><i style="background:${css(t.c)};width:${n/H.length*100}%"></i><b>${n}</b></div>`; }).join("")}</div>`; };
+      const s0=()=>{ x.step(0,`<h2>Which truck is nearest?</h2><p>Four ice cream trucks cruise this neighborhood. <b>Click anywhere</b> to measure the straight-line distance from that house to every truck.</p><div id="out"></div>`); x.hint("Click a house");
+        x.click(async p=>{ lineL.removeAll(); x.sfx.pop(); const ds=T.map(t=>({t,d:mi(p,t)})).sort((a,b)=>a.d-b.d);
+          const gl=ds.map((o,i)=>{ const g=G(null,SYM.line([...o.t.c,i?.7:1],i?2:5,i?"dash":"solid")); lineL.add(g); return {g,o}; });
+          lineL.add(pop(G(P(p.lon,p.lat),SYM.star([16,38,44,1],22)),"Measured house","The house you measured from."));
+          await x.anim(600,k=>{ const e=ease(k); gl.forEach(({g,o})=>{ g.geometry=LINE([[p.lon,p.lat],[p.lon+(o.t.lon-p.lon)*e,p.lat+(o.t.lat-p.lat)*e]]); }); },"lines");
+          gl.forEach(({o})=>lineL.add(G(P((p.lon+o.t.lon)/2,(p.lat+o.t.lat)/2),SYM.txt(`${fmt1(o.d)} mi`,[16,38,44,1],10,0,true)))); x.sfx.ding();
+          x.q("#out").innerHTML=`<div class="bars">${ds.map(o=>`<div><span>${o.t.name}</span><i style="background:${css(o.t.c)};width:${Math.min(100,o.d/ds[ds.length-1].d*100)}%"></i><b>${fmt1(o.d)}</b></div>`).join("")}</div>
+            <p class="note win"><b>${ds[0].t.name}</b> is nearest, ${fmt1(ds[0].d)} mi away. Click another house, or go on.</p><div class="row"><button class="btn" id="next">Next →</button></div>`;
+          x.on("#next",s1); }); };
+      const s1=()=>{ x.click(null); x.hint(null); lineL.removeAll();
+        x.step(1,`<h2>Map the territories</h2><p>Give every spot to its <b>nearest</b> truck. Watch the territories grow out from each truck until they bump into each other.</p><div class="row"><button class="btn" id="run">Draw territories</button></div><div id="out"></div>`);
+        x.on("#run",async()=>{ x.q("#run").disabled=true; await wave(T,1800);
+          x.q("#out").innerHTML=`<p>Customers per truck:</p>${bars(T)}<div class="row"><button class="btn" id="next">Next →</button></div>`; x.on("#next",s2); }); };
+      const s2=()=>{ x.step(2,`<h2>Park your own truck</h2><p>Start your own ice cream business! <b>Click the map to park your truck</b> (yellow star). Win at least <b>${GOAL} customers</b> who are closer to you than to any other truck.</p><div id="out"></div>`); x.hint("Click to park your truck");
+        const park=async p=>{ if(L.finished) return; const me={...ME,lon:p.lon,lat:p.lat}, list=[...T,me]; drawTrucks(list); x.sfx.pop(); x.click(null);
+          await wave(list,1000); const n=H.filter(h=>h.t===me).length;
+          x.q("#out").innerHTML=bars(list);
+          if(n>=GOAL){ x.hint(null); x.done(`<b>Business is booming!</b> ${n} kids are closer to your truck than any other. Stores and fire departments use proximity like this to decide where to open.`); }
+          else { x.sfx.miss(); x.q("#out").insertAdjacentHTML("afterbegin",`<p class="note">Only ${n} customers. You need ${GOAL}. Try a crowded spot far from the other trucks.</p>`); x.click(park); } };
+        x.click(park); };
+      s0();
+    }});
+
+  /* ---------- menu & routing ---------- */
+  $("sel").innerHTML=`<option value="">All labs (menu)</option>`+DEMOS.map(d=>`<option value="${d.id}">${d.n}. ${d.name}: ${d.title}</option>`).join("");
+  $("sel").onchange=e=>{ SFX.click(); location.hash=e.target.value; };
+  const snd=$("snd"), setSnd=()=>{ snd.textContent=SFX.on?"Sound on":"Sound off"; snd.setAttribute("aria-pressed",String(SFX.on)); };
+  snd.onclick=()=>{ SFX.set(!SFX.on); setSnd(); SFX.click(); }; setSnd();
+  addEventListener("hashchange",route);
+  window.SAL={view,DEMOS,L,start};
+  route();
+});
+}
+</script>
+</body>
+</html>
