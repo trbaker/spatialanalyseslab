@@ -17,6 +17,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://js.arcgis.com/4.30/esri/themes/light/main.css">
 <script src="https://js.arcgis.com/4.30/"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <style>
 /*
 VOICE: friendly field lab for teens: short sentences, one action per step, instant feedback, sounds and confetti.
@@ -151,6 +152,48 @@ input[type=range]{width:100%;height:44px;accent-color:var(--coral)}
 .credits a{color:var(--teal);font-weight:600;text-underline-offset:2px}
 .credits a:hover{color:var(--coral-ink)}
 .credits a:focus-visible{outline:3px solid var(--coral);outline-offset:2px;border-radius:3px}
+
+/* ---------- exit tickets ---------- */
+#ticket{flex:1;overflow:auto;background:var(--bg);padding:clamp(20px,4vw,48px) max(4vw,16px) 0}
+@media (max-width:760px){#ticket{flex:none;overflow:visible}}
+body.tk-mode main{display:none}
+.tk{max-width:780px;margin:0 auto clamp(20px,4vw,48px);background:#fff;border-radius:16px;padding:clamp(20px,4vw,40px);border:1px solid var(--line)}
+.tk-kick{color:var(--coral-ink);font-weight:600;margin:0 0 4px}
+.tk h2{font-size:clamp(26px,4vw,34px);line-height:1.1;margin:0 0 10px}
+.tk-name{display:block;font-weight:600;margin:18px 0 6px}
+.tk-name input{display:block;width:100%;max-width:420px;font:inherit;font-size:16px;font-weight:400;min-height:44px;padding:8px 12px;border:2px solid var(--line);border-radius:10px;margin-top:6px;color:var(--ink)}
+.tk-name input:focus-visible,.q textarea:focus-visible{outline:3px solid var(--coral);outline-offset:1px}
+fieldset.q{border:2px solid var(--line);border-radius:12px;margin:16px 0;padding:12px 14px 14px}
+fieldset.q legend{font-weight:600;padding:0 6px;line-height:1.35}
+.q .lab-tag{display:inline-block;font-size:12px;font-weight:600;color:var(--muted);background:var(--bg);border-radius:999px;padding:1px 8px;margin-right:6px;vertical-align:1px}
+.q label.ch{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:8px;cursor:pointer;min-height:44px}
+.q label.ch:hover{background:var(--bg)}
+.q input[type=radio]{width:20px;height:20px;margin:2px 0 0;accent-color:var(--teal);flex:none}
+.q input[type=radio]:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
+.q.right{border-color:var(--ok);background:#f3fbf6}
+.q.wrong{border-color:var(--coral);background:#fff7f6}
+.q.blank{border-color:var(--coral)}
+.q .fb{font-size:14px;font-weight:600;margin:6px 0 0 10px}
+.q.right .fb{color:var(--ok)} .q.wrong .fb{color:var(--coral-ink)}
+.q textarea{width:100%;min-height:130px;font:inherit;font-size:16px;line-height:1.5;padding:10px 12px;border:2px solid var(--line);border-radius:10px;resize:vertical;color:var(--ink);margin-top:6px}
+.q .wc{font-size:13px;color:var(--muted);margin:4px 0 0}
+.tk-bar{position:sticky;bottom:0;z-index:2;background:#fff;border-top:1px solid var(--line);padding:12px 0;box-shadow:0 -8px 16px -10px rgba(16,38,44,.25);display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:16px}
+.tk-err{color:var(--coral-ink);font-weight:600;font-size:14px}
+.tk-score{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:6px 0}
+.tk-score b{font-size:clamp(40px,7vw,56px);line-height:1;color:var(--teal);font-variant-numeric:tabular-nums}
+.tk-done{background:#e7f6ee;border-left:4px solid var(--ok);border-radius:8px;padding:14px 16px;margin:18px 0}
+.tk-done p{margin:0 0 8px}
+.tk-sep{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;color:var(--muted);margin:18px 0 4px}
+.tk-sep::after{content:"";flex:1;height:1px;background:var(--line)}
+.lab-link .num.tk-num{background:var(--coral)}
+#printArea{display:none}
+@media print{
+  body>*:not(#printArea){display:none!important}
+  #printArea{display:block!important;color:#000;font:12pt/1.45 Lexend,Arial,sans-serif}
+  #printArea h1{font-size:20pt;margin:0 0 4pt} #printArea .meta{margin:0 0 12pt}
+  #printArea .item{break-inside:avoid;border-top:1px solid #bbb;padding:8pt 0}
+  #printArea .item p{margin:2pt 0}
+}
 @media (max-width:760px){
   html,body{height:auto;min-height:100%}
   main{flex:none;grid-template-columns:minmax(0,1fr);grid-template-rows:50vh auto}
@@ -195,6 +238,8 @@ input[type=range]{width:100%;height:44px;accent-color:var(--coral)}
     <div id="err"><div><h2>The map didn't load</h2><p>This lab needs an internet connection to reach ArcGIS Online (js.arcgis.com). Check your connection or ask your teacher, then reload the page.</p></div></div>
   </section>
 </main>
+<section id="ticket" hidden aria-live="polite"></section>
+<div id="printArea"></div>
 
 <script>
 {
@@ -359,7 +404,7 @@ function showSplash(){
   el.querySelector("#spGo").onclick=()=>close();
   el.querySelector("#spGo").focus({preventScroll:true});
 }
-if(!SPL.some(([id])=>"#"+id===location.hash)) showSplash();
+if(!SPL.some(([id])=>"#"+id===location.hash)&&!/^#exit-/.test(location.hash)) showSplash();
 
 /* ================= the ten labs ================= */
 const DEMOS=[];
@@ -449,27 +494,30 @@ else require(["esri/Map","esri/views/MapView","esri/Graphic","esri/layers/Graphi
           <div class="row"><button class="btn ghost" id="again">Do it again</button></div>
           <h3>Try another analysis</h3>${nx.map(n=>`<a class="lab-link" href="#${n.id}"><span class="num">${n.n}</span><span><b>${n.name}</b><small>${n.title}</small></span></a>`).join("")}`);
         $("again").onclick=()=>start(d);
+        if(d.id==="proximity") $("card").insertAdjacentHTML("beforeend",`<div class="tk-sep">You finished the last lab!</div><p class="muted">Show what you learned with an exit ticket:</p>${TICKET_LINKS()}`);
         const last=$("card").querySelector(".win"); if(last&&last.scrollIntoView) last.scrollIntoView({block:"nearest",behavior:reduce?"auto":"smooth"});
       }
     };
     return x;
   }
+  function leaveTicket(){ document.body.classList.remove("tk-mode"); $("ticket").hidden=true; }
   function start(d){
-    stop(); L.demo=d; $("sel").value=d.id; $("title").textContent=`${d.n}. ${d.name}`; $("what").textContent=d.what;
+    leaveTicket(); stop(); L.demo=d; $("sel").value=d.id; $("title").textContent=`${d.n}. ${d.name}`; $("what").textContent=d.what;
     document.title=`${d.name} · Spatial Analysis Lab`;
     setBase(d.basemap||"gray-vector"); view.constraints.maxZoom=18;
     view.goTo({target:P(...d.center),zoom:d.zoom-(view.width<600?1:0)},{duration:reduce?0:900}).catch(()=>{});
     d.start(ctxFor(d));
   }
   function home(){
-    stop(); L.demo=null; $("sel").value=""; $("title").textContent="Spatial Analysis Lab"; document.title="Spatial Analysis Lab";
+    leaveTicket(); stop(); L.demo=null; $("sel").value=""; $("title").textContent="Spatial Analysis Lab"; document.title="Spatial Analysis Lab";
     $("what").textContent="Ten quick, hands-on labs, about two minutes each. Pick any one, any time, from the menu above or the list below.";
     $("steps").innerHTML="";
-    setCard(`<h2>Pick an analysis</h2><div class="labs">${DEMOS.map(d=>`<a class="lab-link" href="#${d.id}"><span class="num">${d.n}</span><span><b>${d.name}</b><small>${d.title}: ${d.blurb}</small></span></a>`).join("")}</div>`);
+    setCard(`<h2>Pick an analysis</h2><div class="labs">${DEMOS.map(d=>`<a class="lab-link" href="#${d.id}"><span class="num">${d.n}</span><span><b>${d.name}</b><small>${d.title}: ${d.blurb}</small></span></a>`).join("")}</div>
+      <div class="tk-sep">Exit tickets</div>${TICKET_LINKS()}`);
     setBase("gray-vector");
     view.constraints.maxZoom=18; view.goTo({target:P(-96,38.5),zoom:view.width<600?3:4},{duration:reduce?0:900}).catch(()=>{});
   }
-  function route(){ const d=DEMOS.find(x=>x.id===location.hash.slice(1)); d?start(d):home(); }
+  function route(){ const id=location.hash.slice(1), d=DEMOS.find(x=>x.id===id); if(d) start(d); else if(TICKETS[id]) showTicket(id); else home(); }
 
   /* ======================================================================
      1. BUFFER — skate park reach (Springfield, IL)
@@ -1027,8 +1075,142 @@ else require(["esri/Map","esri/views/MapView","esri/Graphic","esri/layers/Graphi
       s0();
     }});
 
+
+  /* ======================================================================
+     EXIT TICKETS — 20-question auto-graded quiz and 4 short answers
+     ====================================================================== */
+  const MCQ=[
+    ["Buffer","In GIS, a buffer is:",["A zone drawn at a set distance around a feature","The shortest route between two places","A count of points inside each square","An estimate of values between measured points"],0],
+    ["Buffer","You double a circular buffer's distance from 1 mile to 2 miles. About how much bigger is its area?",["2 times bigger","3 times bigger","4 times bigger","8 times bigger"],2],
+    ["Overlay","In the hangout lab, the Intersect tool kept only the places where:",["Any one of the layers was present","All of the layers overlapped","The biggest layer was","The layers did not touch"],1],
+    ["Overlay","Which question is best answered with an overlay?",["Where is land that is both flat and outside the flood zone?","How far away is the nearest hospital?","What is the fastest driving route to school?","Are the full-size candy bars clustered?"],0],
+    ["Interpolation","Interpolation is used to:",["Count points inside squares","Find the closest facility","Follow roads to a destination","Estimate values at places that were not measured"],3],
+    ["Interpolation","With IDW (inverse distance weighting), which snow gauge has the most influence on the estimate at your school?",["The farthest gauge","The closest gauge","The gauge with the most snow","Every gauge counts exactly the same"],1],
+    ["Hot spots","A statistically significant hot spot is:",["Any square with at least one report","The square in the middle of the map","A cluster of high values that is unlikely to be random chance","The warmest place on the map"],2],
+    ["Hot spots","Why did the hot spot lab count reports in equal squares before testing?",["Overlapping dots are hard to compare by eye","Squares make the reports disappear","Squares are always more accurate than dots","To remove the busiest areas"],0],
+    ["Network","How is a network route different from a straight-line distance?",["It is always shorter","It must follow connected lines, like roads","It ignores distance","It only works inside one city"],1],
+    ["Network","When you closed a road on your route, the new route was:",["Always shorter","Impossible to find in every case","Exactly the same route","The same length or longer"],3],
+    ["Query","The query price <= 4 AND rating >= 4 selects pizza places that:",["Cost $4 or less AND are rated 4 stars or higher","Cost more than $4 OR are rated below 4 stars","Cost exactly $4","Are within 4 miles of your house"],0],
+    ["Query","Selecting the pizza places within 1 mile of your house is an example of:",["An attribute query","Interpolation","A location (spatial) query","A hot spot test"],2],
+    ["Autocorrelation","A Moran's I value close to 0 means the values are:",["Strongly clustered","Arranged randomly","Perfectly spread out, like a checkerboard","All the same"],1],
+    ["Autocorrelation","Why did you shuffle the candy many times in the autocorrelation lab?",["To make more candy","To fix errors in the data","To move the houses","To see what random maps look like and compare the real map with them"],3],
+    ["Density","Kernel density turns many points into:",["A smooth surface showing where points are concentrated","Straight lines between the points","A list of point names","One average point"],0],
+    ["Density","If you make the search radius bigger, the density map becomes:",["Spikier, with tiny bright spots","Empty","Smoother and more blurred","Limited to fewer points"],2],
+    ["Terrain","Slope measures:",["Height above sea level","How steep the ground is (change in height over distance)","Which direction is north","The temperature on a hill"],1],
+    ["Terrain","Your sled always moved to the lowest neighboring square. GIS uses the same idea to predict:",["Where pizza gets delivered","Which truck is closest","Where buffers overlap","Where rainwater flows downhill"],3],
+    ["Proximity","Each ice cream truck's territory contained the places that were:",["Closer to that truck than to any other truck","Inside a 1-mile buffer","On the shortest route","In the same ZIP code"],0],
+    ["Proximity","Which question could a Find Nearest (proximity) analysis help a city answer?",["How much snow fell last night?","Are litter reports clustered?","Which fire station is closest to each school?","How steep is the sledding hill?"],2]
+  ];
+  const FRQ=[
+    "Pick one analysis from the lab. In your own words, explain what it does and describe a real question in your school or community that it could help answer.",
+    "A new library opens. Explain why a 1-mile buffer around the library and a 1-mile walking route along the streets (network analysis) could include different homes.",
+    "In the hot spot and spatial autocorrelation labs, you compared the real map with random chance. Why is it important to test whether a pattern could just be random?",
+    "Choose two analyses and describe how you could use them together to answer one question. (Example: overlay + proximity to find a safe park site close to many homes.)"
+  ];
+  const TICKETS={
+    "exit-quiz":{menu:"Exit ticket: 20-question quiz",title:"20-question quiz",kind:"mc",blurb:"Multiple choice, graded automatically. Download your results as a PDF."},
+    "exit-response":{menu:"Exit ticket: 4 short answers",title:"4 short answers",kind:"fr",blurb:"Explain your thinking in a few sentences each. Download your answers as a PDF."}
+  };
+  function TICKET_LINKS(){ return Object.entries(TICKETS).map(([id,t],i)=>`<a class="lab-link" href="#${id}"><span class="num tk-num">${i?"B":"A"}</span><span><b>${t.menu}</b><small>${t.blurb}</small></span></a>`).join(""); }
+  const esc=v=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const LET="ABCD";
+  const stampOf=d=>d.toLocaleString(undefined,{weekday:"long",year:"numeric",month:"long",day:"numeric",hour:"numeric",minute:"2-digit",second:"2-digit",timeZoneName:"short"});
+  const fileOf=(kind,name,d)=>{ const p=n=>String(n).padStart(2,"0"), slug=(name.normalize("NFKD").replace(/[^\w\s-]/g,"").trim().replace(/\s+/g,"-").toLowerCase()||"student").slice(0,40);
+    return `exit-ticket-${kind==="mc"?"quiz":"short-answer"}_${slug}_${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.pdf`; };
+  const ascii=t=>String(t).replace(/[‘’ʼ]/g,"'").replace(/[“”]/g,'"').replace(/[–—−]/g,"-").replace(/…/g,"...").replace(/ /g," ");
+  const words=t=>(t.trim().match(/\S+/g)||[]).length;
+
+  /* report = {kind,title,name,when,summary,items:[{head,lines:[[label,text,tone]]}]} */
+  function makePDF(rep,file){
+    const all=[rep.name,rep.summary||"",...rep.items.flatMap(it=>[it.head,...it.lines.map(l=>l[1])])].map(ascii).join(" ");
+    if(!(window.jspdf&&window.jspdf.jsPDF)||/[^\x00-\xFF]/.test(all)) return printReport(rep);
+    const doc=new window.jspdf.jsPDF({unit:"pt",format:"letter"}), PW=612, PH=792, M=54, W=PW-2*M; let y=0;
+    const ink=[16,38,44], teal=[11,59,71], ok=[19,128,79], bad=[194,54,44], mute=[79,107,115];
+    const txt=(t,{size=11,bold=false,color=ink,indent=0,after=4}={})=>{ doc.setFont("helvetica",bold?"bold":"normal"); doc.setFontSize(size); doc.setTextColor(...color);
+      for(const l of doc.splitTextToSize(ascii(t),W-indent)){ if(y+size*1.3>PH-M){ doc.addPage(); y=M; } doc.text(l,M+indent,y+size); y+=size*1.32; } y+=after; };
+    doc.setFillColor(...teal); doc.rect(0,0,PW,86,"F"); doc.setTextColor(255,255,255);
+    doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.text("Spatial Analysis Lab",M,32);
+    doc.setFont("helvetica","bold"); doc.setFontSize(20); doc.text(ascii(`Exit ticket: ${rep.title}`),M,58);
+    y=112;
+    txt(`Name: ${rep.name}`,{size:13,bold:true,after:2});
+    txt(`Completed: ${stampOf(rep.when)}`,{color:mute,after:10});
+    if(rep.summary){ doc.setFillColor(231,246,238); const top=y; y+=10; txt(rep.summary,{size:15,bold:true,color:ok,indent:12,after:6}); doc.rect(M,top,4,y-top,"F"); y+=8; }
+    rep.items.forEach(it=>{ if(y>PH-M-70){ doc.addPage(); y=M; } doc.setDrawColor(214,226,227); doc.line(M,y,PW-M,y); y+=10;
+      txt(it.head,{bold:true,after:3});
+      it.lines.forEach(([label,t,tone])=>txt(`${label}${t}`,{indent:14,color:tone==="ok"?ok:tone==="bad"?bad:tone==="mute"?mute:ink,after:2}));
+      y+=6; });
+    const n=doc.getNumberOfPages();
+    for(let i=1;i<=n;i++){ doc.setPage(i); doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...mute);
+      doc.text(ascii(`${rep.name} - ${rep.title} - ${rep.when.toLocaleDateString()}`),M,PH-28); doc.text(`Page ${i} of ${n}`,PW-M,PH-28,{align:"right"}); }
+    doc.save(file); return "pdf";
+  }
+  function printReport(rep){
+    $("printArea").innerHTML=`<h1>Exit ticket: ${esc(rep.title)}</h1><p class="meta"><b>Name: ${esc(rep.name)}</b><br>Completed: ${esc(stampOf(rep.when))}${rep.summary?`<br><b>${esc(rep.summary)}</b>`:""}</p>`
+      +rep.items.map(it=>`<div class="item"><p><b>${esc(it.head)}</b></p>${it.lines.map(([l,t])=>`<p>${esc(l)}${esc(t).replace(/\n/g,"<br>")}</p>`).join("")}</div>`).join("");
+    try{ window.print(); }catch(e){} return "print";
+  }
+
+  function showTicket(id){
+    const t=TICKETS[id]; stop(); L.demo=null; document.body.classList.add("tk-mode"); const sec=$("ticket"); sec.hidden=false; sec.scrollTop=0;
+    $("sel").value=id; $("title").textContent="Exit ticket"; document.title=`${t.menu} · Spatial Analysis Lab`;
+    const mc=t.kind==="mc";
+    sec.innerHTML=`<div class="tk"><p class="tk-kick">Exit ticket · Spatial Analysis Lab</p><h2>${t.title}</h2>
+      <p>${mc?"Answer all 20 questions, then submit. Your quiz is graded right away, and a PDF of your results downloads for you to turn in.":"Answer each question in 2 to 4 complete sentences, then submit. A PDF of your answers downloads for you to turn in."}</p>
+      <label class="tk-name" for="tkName">Your name<input id="tkName" autocomplete="name" maxlength="80" required></label>
+      <form id="tkForm" novalidate>${mc
+        ?MCQ.map(([lab,q,opts],i)=>`<fieldset class="q" id="q${i}"><legend><span class="lab-tag">${lab}</span>${i+1}. ${esc(q)}</legend>${opts.map((o,k)=>`<label class="ch"><input type="radio" name="q${i}" value="${k}"><span><b>${LET[k]}.</b> ${esc(o)}</span></label>`).join("")}<p class="fb" hidden></p></fieldset>`).join("")
+        :FRQ.map((q,i)=>`<fieldset class="q" id="q${i}"><legend>${i+1}. ${esc(q)}</legend><textarea name="q${i}" aria-label="Answer to question ${i+1}" maxlength="2500"></textarea><p class="wc" id="wc${i}">0 words</p></fieldset>`).join("")}
+      </form>
+      <div class="tk-bar" id="tkBar"><button class="btn" id="tkSubmit">Submit and download PDF</button><span class="muted" id="tkProg"></span><span class="tk-err" id="tkErr" role="alert"></span></div>
+      <div id="tkResult"></div>
+      <div class="credits" style="border:0;padding:18px 0 0"><p>Designed by <a href="https://tbaker.com" target="_blank" rel="noopener">Tom Baker</a>.</p><p><a href="https://esriurl.com/k12software" target="_blank" rel="noopener">Get GIS software for your school.</a></p></div></div>`;
+    const form=$("tkForm"), prog=$("tkProg"), err=$("tkErr");
+    const answers=()=>mc?MCQ.map((q,i)=>{ const c=form.querySelector(`input[name=q${i}]:checked`); return c?+c.value:null; }):FRQ.map((q,i)=>form.querySelector(`textarea[name=q${i}]`).value);
+    const progress=()=>{ const a=answers(), n=a.filter(v=>mc?v!==null:words(v)>0).length; prog.textContent=`${n} of ${a.length} answered`;
+      if(!mc) a.forEach((v,i)=>{ const w=words(v); $("wc"+i).textContent=`${w} word${w===1?"":"s"}`; }); };
+    form.addEventListener("input",()=>{ progress(); err.textContent=""; });
+    form.addEventListener("change",e=>{ if(e.target.type==="radio"){ SFX.click(); e.target.closest(".q").classList.remove("blank"); } });
+    progress();
+    let report=null, file=null;
+    $("tkSubmit").onclick=()=>{
+      if(report){ const how=makePDF(report,file); if(how==="print") err.textContent=""; return; }
+      const name=$("tkName").value.trim(), a=answers();
+      form.querySelectorAll(".q").forEach(f=>f.classList.remove("blank"));
+      if(!name){ err.textContent="Type your name first."; $("tkName").focus(); SFX.miss(); return; }
+      const missing=a.map((v,i)=>(mc?v===null:!words(v))?i:-1).filter(i=>i>=0);
+      if(missing.length){ missing.forEach(i=>$("q"+i).classList.add("blank")); err.textContent=missing.length>4?`${missing.length} questions are still blank (outlined in red).`:`Answer question${missing.length>1?"s":""} ${missing.map(i=>i+1).join(", ")} first.`;
+        $("q"+missing[0]).scrollIntoView({block:"center",behavior:reduce?"auto":"smooth"}); SFX.miss(); return; }
+      const when=new Date();
+      form.querySelectorAll("input,textarea").forEach(e=>e.disabled=true); $("tkName").disabled=true;
+      if(mc){
+        let score=0;
+        const items=MCQ.map(([lab,q,opts,c],i)=>{ const ok=a[i]===c; if(ok) score++;
+          const f=$("q"+i), fb=f.querySelector(".fb"); f.classList.add(ok?"right":"wrong"); fb.hidden=false;
+          fb.textContent=ok?"Correct":`Not quite. Correct answer: ${LET[c]}. ${opts[c]}`;
+          return {head:`${i+1}. ${q}`,lines:[["Your answer: ",`${LET[a[i]]}. ${opts[a[i]]}`,ok?"ok":"bad"],...(ok?[["","Correct","ok"]]:[["Correct answer: ",`${LET[c]}. ${opts[c]}`,"mute"]])]}; });
+        const pct=Math.round(score/MCQ.length*100), summary=`Score: ${score} / ${MCQ.length} (${pct}%)`;
+        report={kind:"mc",title:t.title,name,when,summary,items};
+        $("tkResult").innerHTML=`<div class="tk-done"><div class="tk-score"><b>${score} / ${MCQ.length}</b><span>${pct}% · ${pct>=90?"Outstanding!":pct>=70?"Nice work!":"Review the labs you missed and try again with your teacher."}</span></div>
+          <p>Submitted by <b>${esc(name)}</b> on ${esc(stampOf(when))}.</p><p class="muted">Your PDF is downloading. Turn it in to your teacher. Each question above now shows whether you got it right.</p></div>`;
+        if(pct>=70){ SFX.win(); confetti(); } else SFX.ding();
+      } else {
+        const items=FRQ.map((q,i)=>({head:`${i+1}. ${q}`,lines:[["",a[i].trim(),""],["",`(${words(a[i])} words)    Teacher score: ______`,"mute"]]}));
+        report={kind:"fr",title:t.title,name,when,summary:"",items};
+        $("tkResult").innerHTML=`<div class="tk-done"><p><b>Submitted!</b> Thanks, ${esc(name)}.</p><p>Completed ${esc(stampOf(when))}.</p><p class="muted">Your PDF is downloading. Turn it in to your teacher.</p></div>`;
+        SFX.win(); confetti();
+      }
+      file=fileOf(t.kind,name,when);
+      $("tkSubmit").textContent="Download PDF again"; err.textContent="";
+      const how=makePDF(report,file);
+      if(how==="print") $("tkResult").insertAdjacentHTML("beforeend",`<p class="note">Your browser's print window opened. Choose <b>Save as PDF</b> as the printer to save your answers.</p>`);
+      $("tkResult").scrollIntoView({block:"nearest",behavior:reduce?"auto":"smooth"});
+      window.SAL.lastReport={file,how,summary:report.summary,name,stamp:stampOf(when)};
+    };
+  }
+
   /* ---------- menu & routing ---------- */
-  $("sel").innerHTML=`<option value="">All labs (menu)</option>`+DEMOS.map(d=>`<option value="${d.id}">${d.n}. ${d.name}: ${d.title}</option>`).join("");
+  $("sel").innerHTML=`<option value="">All labs (menu)</option>`+DEMOS.map(d=>`<option value="${d.id}">${d.n}. ${d.name}: ${d.title}</option>`).join("")
+    +`<optgroup label="Exit tickets">${Object.entries(TICKETS).map(([id,t])=>`<option value="${id}">${t.menu}</option>`).join("")}</optgroup>`;
   $("sel").onchange=e=>{ SFX.click(); location.hash=e.target.value; };
   const snd=$("snd"), setSnd=()=>{ snd.textContent=SFX.on?"Sound on":"Sound off"; snd.setAttribute("aria-pressed",String(SFX.on)); };
   snd.onclick=()=>{ SFX.set(!SFX.on); setSnd(); SFX.click(); }; setSnd();
